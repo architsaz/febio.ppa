@@ -170,8 +170,8 @@ double calculate_stddev(double arr[], int size, double mean, double *weight)
     }
     return sqrt(sum / sum_weight);
 }
-// Calling defined statictic analysis function in ordered
-void mystat(double *arr, int n, double *area, double **output1)
+// Calling defined statictic analysis function in ordered for double field
+void mystat_double(double *arr, int n, double *area, double **output1)
 {
     static double *output;
     output = calloc((size_t)5, sizeof(*output));
@@ -181,8 +181,25 @@ void mystat(double *arr, int n, double *area, double **output1)
     output[3] = calculate_stddev(arr, n, output[0], area);
     *output1 = output;
 }
-// analysis the max stress @ color region mask and region mask
-int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, double *field, char *casename, char *study, char *filename)
+// statictic analysis function for int field
+void mystat_int(int *arr, int n, int *all_class, int num_class, double *area, double **frequency_class2)
+{
+    double *frequency_class = (double *) calloc((size_t)num_class, sizeof(double));
+    double area_field = sumarr(area, n);
+    for (int ele = 0 ; ele<n ;ele++){
+        for (int i=0;i<num_class;i++){
+            if (arr[ele]==all_class[i])
+            {
+                frequency_class[i]+=area[ele];
+                break;
+            }
+        }
+    }
+    for (int i=0;i<num_class;i++) frequency_class[i] = (frequency_class[i]/area_field)*100;
+    *frequency_class2 = frequency_class;
+}
+// analysis double fields in different regions and colored areas
+int analz_double(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, double *field, char *casename, char *study, char *filename)
 {
     int e = 0;
 
@@ -215,6 +232,7 @@ int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, dou
         if (relems[ele] == 4 || relems[ele] == 8 || relems[ele] == 16)
             nele_aneu++;
     }
+    #ifdef DEBUG
     printf("nele_press: %d \n", nele_press);
     printf("nele_red: %d \n", nele_red);
     printf("nele_yel: %d \n", nele_yel);
@@ -225,6 +243,7 @@ int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, dou
     printf("nele_nek: %d \n", nele_nek);
     printf("nele_part: %d \n", nele_part);
     printf("nele_aneu: %d \n", nele_aneu);
+    #endif
     field_red = calloc((size_t)nele_red, sizeof(double));
     field_yel = calloc((size_t)nele_yel, sizeof(double));
     field_wht = calloc((size_t)nele_wht, sizeof(double));
@@ -321,7 +340,7 @@ int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, dou
     double stat_empty[4] = {0, 0, 0, 0};
     if (nele_red != 0)
     {
-        mystat(field_red, nele_red, area_red, &stat_red);
+        mystat_double(field_red, nele_red, area_red, &stat_red);
     }
     else
     {
@@ -329,7 +348,7 @@ int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, dou
     }
     if (nele_yel != 0)
     {
-        mystat(field_yel, nele_yel, area_yel, &stat_yel);
+        mystat_double(field_yel, nele_yel, area_yel, &stat_yel);
     }
     else
     {
@@ -337,7 +356,7 @@ int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, dou
     }
     if (nele_wht != 0)
     {
-        mystat(field_wht, nele_wht, area_wht, &stat_wht);
+        mystat_double(field_wht, nele_wht, area_wht, &stat_wht);
     }
     else
     {
@@ -345,18 +364,19 @@ int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, dou
     }
     if (nele_rupt != 0)
     {
-        mystat(field_rupt, nele_rupt, area_rupt, &stat_rupt);
+        mystat_double(field_rupt, nele_rupt, area_rupt, &stat_rupt);
     }
     else
     {
         stat_rupt = stat_empty;
     }
-    mystat(field_aneu, nele_aneu, area_aneu, &stat_aneu);
-    mystat(field_dom, nele_dom, area_dom, &stat_dom);
-    mystat(field_bod, nele_bod, area_bod, &stat_bod);
-    mystat(field_nek, nele_nek, area_nek, &stat_nek);
-    mystat(field_part, nele_part, area_part, &stat_part);
-    mystat(field_press, nele_press, area_press, &stat_press);
+    mystat_double(field_aneu, nele_aneu, area_aneu, &stat_aneu);
+    mystat_double(field_dom, nele_dom, area_dom, &stat_dom);
+    mystat_double(field_bod, nele_bod, area_bod, &stat_bod);
+    mystat_double(field_nek, nele_nek, area_nek, &stat_nek);
+    mystat_double(field_part, nele_part, area_part, &stat_part);
+    mystat_double(field_press, nele_press, area_press, &stat_press);
+    #ifdef DEBUG
     printf("red: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_red, nele_red), stat_red[0], stat_red[1], stat_red[2], stat_red[3]);
     printf("yel: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_yel, nele_yel), stat_yel[0], stat_yel[1], stat_yel[2], stat_yel[3]);
     printf("wht: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_wht, nele_wht), stat_wht[0], stat_wht[1], stat_wht[2], stat_wht[3]);
@@ -367,7 +387,7 @@ int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, dou
     printf("ane: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_aneu, nele_aneu), stat_aneu[0], stat_aneu[1], stat_aneu[2], stat_aneu[3]);
     printf("par: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_part, nele_part), stat_part[0], stat_part[1], stat_part[2], stat_part[3]);
     printf("pre: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_press, nele_press), stat_press[0], stat_press[1], stat_press[2], stat_press[3]);
-
+    #endif
     // save in a table txt
     // arrays of different types and sizes
     char *arr1[4];
@@ -458,6 +478,341 @@ int analzs(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, dou
         free(stat_wht);
     if (stat_rupt != stat_empty)
         free(stat_rupt);    
+    // Other stat arrays that were dynamically allocated
+    free(stat_aneu);
+    free(stat_dom);
+    free(stat_bod);
+    free(stat_nek);
+    free(stat_part);
+    free(stat_press);
+
+    return e;
+}
+// analysis int fields in different regions and colored areas
+int analz_int(mesh *M, double *area, int *Melem, int *relems, double *Eval_max, int *field, char *casename, char *study, char *filename){
+    int e = 0;
+
+    int nele_red, nele_yel, nele_wht, nele_rupt, nele_press, nele_dom, nele_bod, nele_nek, nele_part, nele_aneu;
+    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = 0;
+    int *field_red, *field_yel, *field_wht, *field_rupt, *field_press, *field_aneu, *field_dom, *field_bod, *field_nek, *field_part;
+    double *area_red, *area_yel, *area_wht, *area_rupt, *area_press, *area_aneu, *area_dom, *area_bod, *area_nek, *area_part;
+    // find all varieties in the int field
+    int *all_class_field = (int *)malloc((size_t)100*sizeof(int));
+    int num_class_field = 0;
+    for (int ele = 0; ele < M->nelem; ele++)
+    {
+        int not_exist = 1;
+        for (int i=0;i<num_class_field;i++){
+            if (field[ele]==all_class_field[i]){
+                not_exist = 0 ;
+                break;
+            }
+        }
+        if (not_exist == 1){
+            all_class_field[num_class_field] = field[ele];
+            num_class_field++;
+        }
+
+    }
+    printf("* number of varietires in the field : %d\n",num_class_field);
+    for (int i=0;i<num_class_field;i++){
+        printf("%d ",all_class_field[i]);
+    }
+    printf("\n");
+    // find the size of each domain
+    for (int ele = 0; ele < M->nelem; ele++)
+    {
+        if (Eval_max[ele] < 1)
+            continue;
+        nele_press++;
+        if (Melem[ele] == 1)
+            nele_red++;
+        if (Melem[ele] == 4)
+            nele_yel++;
+        if (Melem[ele] == 7)
+            nele_wht++;
+        if (Melem[ele] == 9)
+            nele_rupt++;    
+        if (relems[ele] == 16)
+            nele_dom++;
+        if (relems[ele] == 8)
+            nele_bod++;
+        if (relems[ele] == 4)
+            nele_nek++;
+        if (relems[ele] == 1)
+            nele_part++;
+        if (relems[ele] == 4 || relems[ele] == 8 || relems[ele] == 16)
+            nele_aneu++;
+    }
+    #ifdef DEBUG
+        printf("nele_press: %d \n", nele_press);
+        printf("nele_red: %d \n", nele_red);
+        printf("nele_yel: %d \n", nele_yel);
+        printf("nele_wht: %d \n", nele_wht);
+        printf("nele_rupt: %d \n", nele_rupt);
+        printf("nele_dom: %d \n", nele_dom);
+        printf("nele_bod: %d \n", nele_bod);
+        printf("nele_nek: %d \n", nele_nek);
+        printf("nele_part: %d \n", nele_part);
+        printf("nele_aneu: %d \n", nele_aneu);
+    #endif
+    field_red = calloc((size_t)nele_red, sizeof(int));
+    field_yel = calloc((size_t)nele_yel, sizeof(int));
+    field_wht = calloc((size_t)nele_wht, sizeof(int));
+    field_rupt = calloc((size_t)nele_rupt, sizeof(int));
+    field_aneu = calloc((size_t)nele_aneu, sizeof(int));
+    field_press = calloc((size_t)nele_press, sizeof(int));
+    field_dom = calloc((size_t)nele_dom, sizeof(int));
+    field_bod = calloc((size_t)nele_bod, sizeof(int));
+    field_nek = calloc((size_t)nele_nek, sizeof(int));
+    field_part = calloc((size_t)nele_part, sizeof(int));
+
+    area_red = calloc((size_t)nele_red, sizeof(double));
+    area_yel = calloc((size_t)nele_yel, sizeof(double));
+    area_wht = calloc((size_t)nele_wht, sizeof(double));
+    area_rupt = calloc((size_t)nele_rupt, sizeof(double));
+    area_aneu = calloc((size_t)nele_aneu, sizeof(double));
+    area_press = calloc((size_t)nele_press, sizeof(double));
+    area_dom = calloc((size_t)nele_dom, sizeof(double));
+    area_bod = calloc((size_t)nele_bod, sizeof(double));
+    area_nek = calloc((size_t)nele_nek, sizeof(double));
+    area_part = calloc((size_t)nele_part, sizeof(double));
+    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = 0;
+    for (int ele = 0; ele < M->nelem; ele++)
+    {
+        if (Eval_max[ele] < 1)
+            continue;
+        field_press[nele_press] = field[ele];
+        area_press[nele_press] = area[ele];
+        nele_press++;
+        if (Melem[ele] == 1)
+        {
+            field_red[nele_red] = field[ele];
+            area_red[nele_red] = area[ele];
+            nele_red++;
+        }
+
+        if (Melem[ele] == 4)
+        {
+            field_yel[nele_yel] = field[ele];
+            area_yel[nele_yel] = area[ele];
+            nele_yel++;
+        }
+
+        if (Melem[ele] == 7)
+        {
+            field_wht[nele_wht] = field[ele];
+            area_wht[nele_wht] = area[ele];
+            nele_wht++;
+        }
+
+        if (Melem[ele] == 9)
+        {
+            field_rupt[nele_rupt] = field[ele];
+            area_rupt[nele_rupt] = area[ele];
+            nele_rupt++;
+        }
+
+        if (relems[ele] == 16)
+        {
+            field_dom[nele_dom] = field[ele];
+            area_dom[nele_dom] = area[ele];
+            nele_dom++;
+        }
+
+        if (relems[ele] == 8)
+        {
+            field_bod[nele_bod] = field[ele];
+            area_bod[nele_bod] = area[ele];
+            nele_bod++;
+        }
+
+        if (relems[ele] == 4)
+        {
+            field_nek[nele_nek] = field[ele];
+            area_nek[nele_nek] = area[ele];
+            nele_nek++;
+        }
+
+        if (relems[ele] == 1)
+        {
+            field_part[nele_part] = field[ele];
+            area_part[nele_part] = area[ele];
+            nele_part++;
+        }
+
+        if (relems[ele] == 4 || relems[ele] == 8 || relems[ele] == 16)
+        {
+            field_aneu[nele_aneu] = field[ele];
+            area_aneu[nele_aneu] = area[ele];
+            nele_aneu++;
+        }
+    }
+    // Calculate statistics
+    double *stat_red, *stat_yel, *stat_wht, *stat_rupt, *stat_aneu, *stat_dom, *stat_bod, *stat_nek, *stat_part, *stat_press;
+    double *stat_empty = (double *)calloc((size_t)num_class_field,sizeof(double));
+    if (nele_red != 0)
+    {
+        mystat_int(field_red, nele_red, all_class_field, num_class_field, area_red, &stat_red);
+    }
+    else
+    {
+        stat_red = stat_empty;
+    }
+    if (nele_yel != 0)
+    {
+        mystat_int(field_yel, nele_yel, all_class_field, num_class_field, area_yel, &stat_yel);
+    }
+    else
+    {
+        stat_yel = stat_empty;
+    }
+    if (nele_wht != 0)
+    {
+        mystat_int(field_wht, nele_wht, all_class_field, num_class_field, area_wht, &stat_wht);
+    }
+    else
+    {
+        stat_wht = stat_empty;
+    }
+    if (nele_rupt != 0)
+    {
+        mystat_int(field_rupt, nele_rupt, all_class_field, num_class_field, area_rupt, &stat_rupt);
+    }
+    else
+    {
+        stat_rupt = stat_empty;
+    }
+    mystat_int(field_aneu, nele_aneu, all_class_field, num_class_field, area_aneu, &stat_aneu);
+    mystat_int(field_dom, nele_dom, all_class_field, num_class_field, area_dom, &stat_dom);
+    mystat_int(field_bod, nele_bod, all_class_field, num_class_field, area_bod, &stat_bod);
+    mystat_int(field_nek, nele_nek, all_class_field, num_class_field, area_nek, &stat_nek);
+    mystat_int(field_part, nele_part, all_class_field, num_class_field, area_part, &stat_part);
+    mystat_int(field_press, nele_press, all_class_field, num_class_field, area_press, &stat_press);
+        printf("all class in filed: ");
+        for (int i=0;i<num_class_field;i++) printf("%d ",all_class_field[i]);
+        printf("\n");
+        printf("red region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_red[i]);
+        printf("\n");
+        printf("white region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_wht[i]);
+        printf("\n");
+        printf("yellow region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_yel[i]);
+        printf("\n");
+        printf("rupture region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_rupt[i]);
+        printf("\n");
+        printf("aneu region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_aneu[i]);
+        printf("\n");
+        printf("dome region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_dom[i]);
+        printf("\n");
+        printf("body region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_bod[i]);
+        printf("\n");
+        printf("neck region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_nek[i]);
+        printf("\n");
+        printf("parent region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_part[i]);
+        printf("\n");
+        printf("pressurized region: ");
+        for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_press[i]);
+        printf("\n");
+
+    // save in a table txt
+    // arrays of different types and sizes
+    char *arr1[100];
+    for (int i = 0; i < num_class_field; i++)
+    {
+        arr1[i] = (char *)malloc(strlen(casename) + 1); // +1 for the null terminator
+        if (arr1[i] != NULL)
+        {
+            strcpy(arr1[i], casename);
+        }
+        else
+        {
+            // Handle memory allocation failure
+            fprintf(stderr, "ERROR: Memory allocation failed for arr1[%d]\n", i);
+            exit(EXIT_FAILURE);
+        }
+    }
+    char *arr2[100];
+    for (int i = 0; i < num_class_field; i++)
+    {
+        arr2[i] = (char *)malloc(strlen(study) + 1); // +1 for the null terminator
+        if (arr2[i] != NULL)
+        {
+            strcpy(arr2[i], study);
+        }
+        else
+        {
+            // Handle memory allocation failure
+            fprintf(stderr, "ERROR: Memory allocation failed for arr2[%d]\n", i);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // Number of arrays and their sizes
+    int numArrays = 13;
+    int sizes[] = {num_class_field, num_class_field, num_class_field, num_class_field, num_class_field, num_class_field, num_class_field, num_class_field, num_class_field, num_class_field, num_class_field, num_class_field, num_class_field}; // Sizes of the arrays
+
+    // Array of pointers to the arrays
+    void *arrays[] = {(void *)arr1, (void *)arr2, (void *)all_class_field, (void *)stat_aneu, (void *)stat_red, (void *)stat_yel, (void *)stat_wht, (void *)stat_rupt, (void *)stat_dom,
+                      (void *)stat_bod, (void *)stat_nek, (void *)stat_part, (void *)stat_press};
+
+    // Data types of each array (int, float, char, string)
+    DataType types[] = {STRING_TYPE, STRING_TYPE, INT_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE};
+
+    // Array of column headers (names)
+    const char *headers[] = {"Casename", "Study", "field_class", "dist_aneu", "dist_red", "dist_yel", "dist_wht", "dist_rupt", "dist_dom", "dist_bod", "dist_nek", "dist_part", "dist_press"};
+
+    // Save the arrays to the file with headers
+    saveMultipleArraysToFile(filename, numArrays, arrays, sizes, types, headers);
+
+    // free memory
+    for (int i = 0; i < num_class_field; i++)
+    {
+        free(arr1[i]); // Free memory allocated for arr1
+        free(arr2[i]); // Free memory allocated for arr2
+    }
+
+    // Free the dynamically allocated smax and area arrays
+    free(field_red);
+    free(field_yel);
+    free(field_wht);
+    free(field_rupt);
+    free(field_aneu);
+    free(field_press);
+    free(field_dom);
+    free(field_bod);
+    free(field_nek);
+    free(field_part);
+
+    free(area_red);
+    free(area_yel);
+    free(area_wht);
+    free(area_rupt);
+    free(area_aneu);
+    free(area_press);
+    free(area_dom);
+    free(area_bod);
+    free(area_nek);
+    free(area_part);
+
+    // Free dynamically allocated stat arrays if they are not pointing to stat_empty
+    if (stat_red != stat_empty)
+        free(stat_red);
+    if (stat_yel != stat_empty)
+        free(stat_yel);
+    if (stat_wht != stat_empty)
+        free(stat_wht);
+    if (stat_rupt != stat_empty)
+        free(stat_rupt);    
+    free (stat_empty);    
     // Other stat arrays that were dynamically allocated
     free(stat_aneu);
     free(stat_dom);
