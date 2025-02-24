@@ -23,232 +23,241 @@
 #include "globalparappa.h"
 #include "input_type.h"
 #include "input.h"
+#include "analysis.h"
+
 int files(void);
 int dirs(void);
-int main(int argc, char const **argv){
-#pragma region argument 
-        // Check if any arguments are passed
-        if (argc < 4)
+int main(int argc, char const **argv)
+{
+#pragma region argument
+    // Check if any arguments are passed
+    if (argc < 4)
+    {
+        fprintf(stderr, "argc is %d\n", argc);
+        fprintf(stderr, "ERROR: Follow the correct way of writting arguments\n");
+        fprintf(stderr, "As a default need one study and one casename.\n");
+        fprintf(stderr, "Usage: %s [--case|-c] [--study|-s] [--iteration|-i] [--time|-t] ... [<arguments>]\n", argv[0]);
+        fprintf(stderr, "exp 1 case:            -c a06161.1 -s msa.1 (optional : -i 0 -t end_step1)\n\n");
+        // fprintf(stderr, "exp 2 compare 2 cases: -c a06161.1 -s msa.1 msa.2 (optional : -i 0 0 -t end_step1 end_step1 )\n\n");
+        fprintf(stderr, "* Default need one study and one casename.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Loop through all arguments starting from argv[1]
+    for (int i = 1; i < argc; i++)
+    {
+        // Check for long options or shortcut versions
+        if (strcmp(argv[i], "--case") == 0 || strcmp(argv[i], "-c") == 0)
         {
-            fprintf(stderr, "argc is %d\n", argc);
-            fprintf(stderr, "ERROR: Follow the correct way of writting arguments\n");
-            fprintf(stderr, "As a default need one study and one casename.\n");
-            fprintf(stderr, "Usage: %s [--case|-c] [--study|-s] [--iteration|-i] [--time|-t] ... [<arguments>]\n", argv[0]);
-            fprintf(stderr, "exp 1 case:            -c a06161.1 -s msa.1 (optional : -i 0 -t end_step1)\n\n");
-            //fprintf(stderr, "exp 2 compare 2 cases: -c a06161.1 -s msa.1 msa.2 (optional : -i 0 0 -t end_step1 end_step1 )\n\n");
-            fprintf(stderr, "* Default need one study and one casename.\n");
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+            {
+                // printf("Argument for case option: %s\n", argv[i + 1]);
+                strcpy(past_filename, argv[i + 1]);
+                i++; // Skip the next argument
+            }
+        }
+        else if (strcmp(argv[i], "--study") == 0 || strcmp(argv[i], "-s") == 0)
+        {
+
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+            {
+                // printf("Argument for study option: %s\n", argv[i + 1]);
+                strcpy(study, argv[i + 1]);
+                num_study++;
+                i++; // Skip the next argument
+            }
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+            {
+                // printf("Argument for study option: %s\n", argv[i + 1]);
+                strcpy(study2, argv[i + 1]);
+                num_study++;
+                i++; // Skip the next argument
+            }
+            printf("* %d study(s) imported as argument.\n", num_study);
+        }
+        else if (strcmp(argv[i], "--time") == 0 || strcmp(argv[i], "-t") == 0)
+        {
+
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+            {
+                printf("Argument for time option: %s\n", argv[i + 1]);
+                strcpy(readingtime1, argv[i + 1]);
+                num_time++;
+                i++; // Skip the next argument
+            }
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+            {
+                // printf("Argument for time option: %s\n", argv[i + 1]);
+                strcpy(readingtime2, argv[i + 1]);
+                num_time++;
+                i++; // Skip the next argument
+            }
+        }
+        else if (strcmp(argv[i], "--iteration") == 0 || strcmp(argv[i], "-i") == 0)
+        {
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+            {
+                // printf("inserted iteration of study 1: %s\n", argv[i + 1]);
+                strcpy(iteration, argv[i + 1]);
+                num_iteration++;
+                i++; // Skip the next argument
+            }
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+            {
+                // printf("inserted for iteration of study 2: %s\n", argv[i + 1]);
+                strcpy(iteration2, argv[i + 1]);
+                num_iteration++;
+                i++; // Skip the next argument
+            }
+        }
+        else
+        {
+            printf("Unknown option: %s\n", argv[i]);
             exit(EXIT_FAILURE);
         }
+    }
+    if (num_study == 0)
+    {
+        fprintf(stderr, "ERROR: please import at least one study as option\n");
+        exit(EXIT_FAILURE);
+    }
+    // control number of iteration and reading time
+    if (num_time != 0 && num_time != num_study)
+    {
+        fprintf(stderr, "ERROR: number of reading time does not correct!\n");
+        exit(EXIT_FAILURE);
+    }
+    if (num_iteration != 0 && num_iteration != num_study)
+    {
+        fprintf(stderr, "ERROR: number of iteration should match with number of study!\n");
+        exit(EXIT_FAILURE);
+    }
+    // define the reading time
+    read_time rt1, rt2;
+    rt1 = end_first_step;
+    rt2 = end_first_step;
 
-        // Loop through all arguments starting from argv[1]
-        for (int i = 1; i < argc; i++)
-        {
-            // Check for long options or shortcut versions
-            if (strcmp(argv[i], "--case") == 0 || strcmp(argv[i], "-c") == 0)
-            {
-                if (i + 1 < argc && argv[i + 1][0] != '-')
-                {
-                    // printf("Argument for case option: %s\n", argv[i + 1]);
-                    strcpy(past_filename, argv[i + 1]);
-                    i++; // Skip the next argument
-                }
-            }
-            else if (strcmp(argv[i], "--study") == 0 || strcmp(argv[i], "-s") == 0)
-            {
-
-                if (i + 1 < argc && argv[i + 1][0] != '-')
-                {
-                    // printf("Argument for study option: %s\n", argv[i + 1]);
-                    strcpy(study, argv[i + 1]);
-                    num_study++;
-                    i++; // Skip the next argument
-                }
-                if (i + 1 < argc && argv[i + 1][0] != '-')
-                {
-                    // printf("Argument for study option: %s\n", argv[i + 1]);
-                    strcpy(study2, argv[i + 1]);
-                    num_study++;
-                    i++; // Skip the next argument
-                }
-                printf("* %d study(s) imported as argument.\n", num_study);
-            }
-            else if (strcmp(argv[i], "--time") == 0 || strcmp(argv[i], "-t") == 0)
-            {
-
-                if (i + 1 < argc && argv[i + 1][0] != '-')
-                {
-                    printf("Argument for time option: %s\n", argv[i + 1]);
-                    strcpy(readingtime1, argv[i + 1]);
-                    num_time++;
-                    i++; // Skip the next argument
-                }
-                if (i + 1 < argc && argv[i + 1][0] != '-')
-                {
-                    // printf("Argument for time option: %s\n", argv[i + 1]);
-                    strcpy(readingtime2, argv[i + 1]);
-                    num_time++;
-                    i++; // Skip the next argument
-                }
-            }
-            else if (strcmp(argv[i], "--iteration") == 0 || strcmp(argv[i], "-i") == 0)
-            {
-                if (i + 1 < argc && argv[i + 1][0] != '-')
-                {
-                    // printf("inserted iteration of study 1: %s\n", argv[i + 1]);
-                    strcpy(iteration, argv[i + 1]);
-                    num_iteration++;
-                    i++; // Skip the next argument
-                }
-                if (i + 1 < argc && argv[i + 1][0] != '-')
-                {
-                    // printf("inserted for iteration of study 2: %s\n", argv[i + 1]);
-                    strcpy(iteration2, argv[i + 1]);
-                    num_iteration++;
-                    i++; // Skip the next argument
-                }
-            }
-            else
-            {
-                printf("Unknown option: %s\n", argv[i]);
-                exit(EXIT_FAILURE);
-            }
-        }
-        if (num_study == 0)
-        {
-            fprintf(stderr, "ERROR: please import at least one study as option\n");
-            exit(EXIT_FAILURE);
-        }
-        // control number of iteration and reading time
-        if (num_time != 0 && num_time != num_study)
-        {
-            fprintf(stderr, "ERROR: number of reading time does not correct!\n");
-            exit(EXIT_FAILURE);
-        }
-        if (num_iteration != 0 && num_iteration != num_study)
-        {
-            fprintf(stderr, "ERROR: number of iteration should match with number of study!\n");
-            exit(EXIT_FAILURE);
-        }
-        // define the reading time
-        read_time rt1, rt2;
-        rt1 = end_first_step;
-        rt2 = end_first_step;
-
-        if (num_time == 1 || num_time == 2)
-        {
-            if (!strcmp(readingtime1, "1"))
-                rt1 = end_first_step;
-            if (!strcmp(readingtime1, "2"))
-                rt1 = end_second_step;
-            if (!strcmp(readingtime1, "max"))
-                rt1 = time_max;
-        }
-        if (num_time == 2)
-        {
-            if (!strcmp(readingtime2, "1"))
-                rt2 = end_first_step;
-            if (!strcmp(readingtime2, "2"))
-                rt2 = end_second_step;
-            if (!strcmp(readingtime2, "max"))
-                rt2 = time_max;
-        }
-#pragma endregion argument 
-#pragma region creatpaths 
-        // make path for files
-        CHECK_ERROR(dirs());
-        CHECK_ERROR(files());
+    if (num_time == 1 || num_time == 2)
+    {
+        if (!strcmp(readingtime1, "1"))
+            rt1 = end_first_step;
+        if (!strcmp(readingtime1, "2"))
+            rt1 = end_second_step;
+        if (!strcmp(readingtime1, "max"))
+            rt1 = time_max;
+    }
+    if (num_time == 2)
+    {
+        if (!strcmp(readingtime2, "1"))
+            rt2 = end_first_step;
+        if (!strcmp(readingtime2, "2"))
+            rt2 = end_second_step;
+        if (!strcmp(readingtime2, "max"))
+            rt2 = time_max;
+    }
+#pragma endregion argument
+#pragma region creatpaths
+    // make path for files
+    CHECK_ERROR(dirs());
+    CHECK_ERROR(files());
 #pragma endregion creatpaths
 #pragma region mesh_and_structs
-        int npoin, nelem, *elems;
-        double *ptxyz;
-        CHECK_ERROR(read_zfem(past_datafilepath[0],&npoin,&nelem,&ptxyz,&elems));
-        /* created required data structure for mesh */
-        int Nredge = 3;
-        int *esurp, *esurp_ptr, *esure, *open;
-        save_esurp(npoin, nelem, elems, &esurp, &esurp_ptr, Nredge);
-        if (ptxyz == NULL || elems == NULL)
-        {
-            fprintf(stderr, "Memory allocation (esurp/esurp_ptr) failed.\n");
-            return 1;
-        }
-        save_esure(nelem, elems, esurp_ptr, esurp, &esure, &open, Nredge);
-        if (open == NULL || esure == NULL)
-        {
-            fprintf(stderr, "Memory allocation (esure/open) failed.\n");
-            return 1;
-        }
-        int opencount = 0;
-        for (int i = 0; i < nelem; i++)
-        {
-            if (open[i] == 0)
-                opencount++;
-        }
-        (opencount == 0) ? printf("! this is open mesh.\n") : printf("* this is close mesh.\n");
+    int npoin, nelem, *elems;
+    double *ptxyz;
+    CHECK_ERROR(read_zfem(past_datafilepath[0], &npoin, &nelem, &ptxyz, &elems));
+    /* created required data structure for mesh */
+    int Nredge = 3;
+    int *esurp, *esurp_ptr, *esure, *open;
+    save_esurp(npoin, nelem, elems, &esurp, &esurp_ptr, Nredge);
+    if (ptxyz == NULL || elems == NULL)
+    {
+        fprintf(stderr, "Memory allocation (esurp/esurp_ptr) failed.\n");
+        return 1;
+    }
+    save_esure(nelem, elems, esurp_ptr, esurp, &esure, &open, Nredge);
+    if (open == NULL || esure == NULL)
+    {
+        fprintf(stderr, "Memory allocation (esure/open) failed.\n");
+        return 1;
+    }
+    int opencount = 0;
+    for (int i = 0; i < nelem; i++)
+    {
+        if (open[i] == 0)
+            opencount++;
+    }
+    (opencount == 0) ? printf("! this is open mesh.\n") : printf("* this is close mesh.\n");
 
-        /*calc norm of ele*/
-        double *normele;
-        CHECK_ERROR(save_normele(nelem, elems, ptxyz, &normele));
-        // flip the normal vector to be outward:
-        for (int ele = 0; ele < (3 * nelem); ele++)
-            normele[ele] = -1 * normele[ele];
-        /*calculate the normal vectors of edges*/
-        double *normedge;
-        CHECK_ERROR(save_normedge(nelem, ptxyz, elems, normele, &normedge));
-        if (normedge == NULL)
-        {
-            fprintf(stderr, "Memory allocation (normedge) failed.\n");
-            return 1;
-        }    
-        /*calculate the centeroid of each element*/
-        double *cen;
-        CHECK_ERROR(save_centri3(nelem, elems, ptxyz, &cen));
-        if (cen == NULL)
-        {
-            fprintf(stderr, "Memory allocation (cen) failed.\n");
-            return 1;
-        }
-        /*calculate the center of each edge for each element*/
-        double *cenedge;
-        CHECK_ERROR(save_cenedgetri3(nelem, elems, ptxyz, &cenedge));
+    /*calc norm of ele*/
+    double *normele;
+    CHECK_ERROR(save_normele(nelem, elems, ptxyz, &normele));
+    // flip the normal vector to be outward:
+    for (int ele = 0; ele < (3 * nelem); ele++)
+        normele[ele] = -1 * normele[ele];
+    /*calculate the normal vectors of edges*/
+    double *normedge;
+    CHECK_ERROR(save_normedge(nelem, ptxyz, elems, normele, &normedge));
+    if (normedge == NULL)
+    {
+        fprintf(stderr, "Memory allocation (normedge) failed.\n");
+        return 1;
+    }
+    /*calculate the centeroid of each element*/
+    double *cen;
+    CHECK_ERROR(save_centri3(nelem, elems, ptxyz, &cen));
+    if (cen == NULL)
+    {
+        fprintf(stderr, "Memory allocation (cen) failed.\n");
+        return 1;
+    }
+    /*calculate the center of each edge for each element*/
+    double *cenedge;
+    CHECK_ERROR(save_cenedgetri3(nelem, elems, ptxyz, &cenedge));
+    // calc area of ele
+    double *area;
+    CHECK_ERROR(calc_area_tri3(ptxyz, elems, nelem, &area));
 #pragma endregion mesh_and_structs
 #pragma region required_mask
-        input *inp = (input *)malloc(sizeof(input));
-        if (inp)
-        {
-            *inp = (input){0}; // Set all integer and pointer fields to 0 or NULL
-        }
-        if (inp == NULL)
-        {
-            fprintf(stderr, "Memory allocation failed for inp pointer\n");
-            exit(EXIT_FAILURE);
-        }
-        CHECK_ERROR(rinputf(pst_rundir, inp));
-        // reading Aneurysm region mask
-        int *region_ele, *region_p;
-        CHECK_ERROR(read_regionmask(past_datafilepath[3], npoin,nelem,elems, inp, &region_ele, &region_p));
-        if (region_ele == NULL || region_p == NULL)
-        {
-            fprintf(stderr, "! ERROR in allocation memory or reading read_regionmask.\n");
-            exit(EXIT_FAILURE);
-        }
-        // reading wall charectristics [colored fields] from .wall file//
-        // label : <red=1, yellow=4, white=7, cyan=0, rupture=9, remain=0>
-        int *Melem;
-        CHECK_ERROR(read_wallmask(past_datafilepath[2],nelem, inp,&Melem));
-        if (Melem == NULL )
-        {
-            fprintf(stderr, "! ERROR in allocation memory or reading read_wallmask.\n");
-            exit(EXIT_FAILURE);
-        }
-        // find a boundary condition
-        int *cell_stat;
-        void *field1;
-        FunctionWithArgs2 prtreadfield[] = {
-            {"bc_mask", 1, nelem, &field1, read_VTK_int},
-        };
-        int countfield = sizeof(prtreadfield) / sizeof(prtreadfield[0]);
-        CHECK_ERROR(ReadVTK("../data/", "a06161.1.BC", 0, prtreadfield, countfield));
-        cell_stat = (int *)field1;
+    input *inp = (input *)malloc(sizeof(input));
+    if (inp)
+    {
+        *inp = (input){0}; // Set all integer and pointer fields to 0 or NULL
+    }
+    if (inp == NULL)
+    {
+        fprintf(stderr, "Memory allocation failed for inp pointer\n");
+        exit(EXIT_FAILURE);
+    }
+    CHECK_ERROR(rinputf(pst_rundir, inp));
+    // reading Aneurysm region mask
+    int *region_ele, *region_p;
+    CHECK_ERROR(read_regionmask(past_datafilepath[3], npoin, nelem, elems, inp, &region_ele, &region_p));
+    if (region_ele == NULL || region_p == NULL)
+    {
+        fprintf(stderr, "! ERROR in allocation memory or reading read_regionmask.\n");
+        exit(EXIT_FAILURE);
+    }
+    // reading wall charectristics [colored fields] from .wall file//
+    // label : <red=1, yellow=4, white=7, cyan=0, rupture=9, remain=0>
+    int *Melem;
+    CHECK_ERROR(read_wallmask(past_datafilepath[2], nelem, inp, &Melem));
+    if (Melem == NULL)
+    {
+        fprintf(stderr, "! ERROR in allocation memory or reading read_wallmask.\n");
+        exit(EXIT_FAILURE);
+    }
+    // find a boundary condition
+    int *cell_stat;
+    void *field1;
+    FunctionWithArgs2 prtreadfield[] = {
+        {"bc_mask", 1, nelem, &field1, read_VTK_int},
+    };
+    int countfield = sizeof(prtreadfield) / sizeof(prtreadfield[0]);
+    char BCfile[100];
+    strcpy(BCfile, past_filename);
+    strcat(BCfile, ".BC");
+    CHECK_ERROR(ReadVTK(pst_datadir, BCfile, 0, prtreadfield, countfield));
+    cell_stat = (int *)field1;
 #pragma endregion required_mask
     // creat mesh struct
     mesh *M1 = (mesh *)malloc(sizeof(mesh));
@@ -427,7 +436,7 @@ int main(int argc, char const **argv){
     end_time = clock();
     cpu_time_used = (double)(end_time - start_time) / CLOCKS_PER_SEC;
     printf("* CG Solver execution time : %.2f seconds\n", cpu_time_used);
-    #ifdef DEBUG    
+#ifdef DEBUG
     // check the result
     FunctionWithArgs prtelefield2[] =
         {
@@ -438,7 +447,7 @@ int main(int argc, char const **argv){
     FunctionWithArgs prtpntfield2[] = {0};
     size_t countpnt2 = 0;
     CHECK_ERROR(SaveVTK("./", "checkpoisson", 0, M1, tri3funcVTK, prtelefield2, countele2, prtpntfield2, countpnt2));
-    #endif
+#endif
 #pragma endregion solve_Poisson
 #pragma region calc_local_basis
     // calculate the gradient scaler on each element
@@ -482,7 +491,7 @@ int main(int argc, char const **argv){
         local_coord[9 * ele + 7] = thrid_vec[1];
         local_coord[9 * ele + 8] = thrid_vec[2];
     }
-    #ifdef DEBUG
+#ifdef DEBUG
     // save local system in VTK format
     // coordinate
     M1->numExtraPoints = 3 * nelem;
@@ -530,7 +539,7 @@ int main(int argc, char const **argv){
     CHECK_ERROR(SaveVTK("./", "checklocalsys", 0, M1, tri3funcVTK, prtelefield3, countele3, prtpntfield3, countpnt3));
     free(extra_ptxyz2);
     free(new_normele2);
-    #endif
+#endif
 #pragma endregion local_basis
     // read stress tensor from log file
     double *st;
@@ -540,7 +549,7 @@ int main(int argc, char const **argv){
         fprintf(stderr, "there is problem in reading stress tensor\n");
         exit(EXIT_FAILURE);
     }
-    #pragma region extract_in-plane_tensor
+#pragma region extract_in-plane_tensor
     // analysis tensor in tangential plane
     double *shear_st = (double *)malloc((size_t)nelem * 4 * sizeof(double));
     double *shear_evals_max = (double *)malloc((size_t)nelem * sizeof(double));
@@ -740,16 +749,19 @@ int main(int argc, char const **argv){
     plot_histogram(bins2, num_bins2, max_value2, num_values2, "eigen_class_disturb.dat", "Histogram of eigen class on aneurysm region", "classes", "frequency", "Eigen_classes_histogram.png", "classes", max_bin_count2);
     free(bins2);
 
-    // calculate the rotation angle for max principal stress 
-    double *rotation_max_t1 = (double *)calloc ((size_t)nelem,sizeof(double));
-    if (!rotation_max_t1){
-        fprintf(stderr,"! Failure in Memory Allication rotation_max_t1 .\n");
+    // calculate the rotation angle for max principal stress
+    double *rotation_max_t1 = (double *)calloc((size_t)nelem, sizeof(double));
+    if (!rotation_max_t1)
+    {
+        fprintf(stderr, "! Failure in Memory Allication rotation_max_t1 .\n");
         exit(EXIT_FAILURE);
     }
-    for (int ele =0;ele<nelem;ele++){
-        if (shear_evals_max[ele] < 1) continue;
+    for (int ele = 0; ele < nelem; ele++)
+    {
+        if (shear_evals_max[ele] < 1)
+            continue;
         double evec_c[3] = {shear_evects_3D_max[3 * ele], shear_evects_3D_max[3 * ele + 1], shear_evects_3D_max[3 * ele + 2]};
-        double t1[3]={local_coord[9*ele+3],local_coord[9*ele+4],local_coord[9*ele+5]};
+        double t1[3] = {local_coord[9 * ele + 3], local_coord[9 * ele + 4], local_coord[9 * ele + 5]};
         double dot_product = evec_c[0] * t1[0] + evec_c[1] * t1[1] + evec_c[2] * t1[2];
         double degree = acos(fabs(dot_product)) * 180.0 / PI;
         // double degree_min = 90;
@@ -766,7 +778,7 @@ int main(int argc, char const **argv){
         //     }
         // }
         // degree = MIN(degree, degree_min);
-        rotation_max_t1[ele]= MAX(degree, rotation_max_t1[ele]);
+        rotation_max_t1[ele] = MAX(degree, rotation_max_t1[ele]);
     }
     // calculate relative angels of eigen vectors
     double *evec_max_angles = (double *)calloc((size_t)nelem * 3, sizeof(double));
@@ -840,28 +852,28 @@ int main(int argc, char const **argv){
     // First vector
     for (int i = 0; i < nelem; i++)
     {
-        ori_sign [M1->npoin + i] = (shear_evals_max[i]>0) ? 1 : -1 ;
+        ori_sign[M1->npoin + i] = (shear_evals_max[i] > 0) ? 1 : -1;
         for (int j = 0; j < 3; j++)
             ori[3 * M1->npoin + 3 * i + j] = shear_evals_max[i] * shear_evects_3D_max[3 * i + j];
     }
     // Second vector
     for (int i = 0; i < nelem; i++)
     {
-        ori_sign [M1->npoin + nelem + i] = (shear_evals_min[i]>0) ? 1 : -1 ;
+        ori_sign[M1->npoin + nelem + i] = (shear_evals_min[i] > 0) ? 1 : -1;
         for (int j = 0; j < 3; j++)
             ori[3 * M1->npoin + 3 * nelem + 3 * i + j] = shear_evals_min[i] * shear_evects_3D_min[3 * i + j];
     }
     // Reversed first vector
     for (int i = 0; i < nelem; i++)
     {
-        ori_sign [M1->npoin + 2 * nelem + i] = (shear_evals_max[i]>0) ? 1 : -1 ;
+        ori_sign[M1->npoin + 2 * nelem + i] = (shear_evals_max[i] > 0) ? 1 : -1;
         for (int j = 0; j < 3; j++)
             ori[3 * M1->npoin + 6 * nelem + 3 * i + j] = -1 * shear_evals_max[i] * shear_evects_3D_max[3 * i + j];
     }
     // Reversed second vector
     for (int i = 0; i < nelem; i++)
     {
-        ori_sign [M1->npoin + 3 * nelem + i] = (shear_evals_min[i]>0) ? 1 : -1 ;
+        ori_sign[M1->npoin + 3 * nelem + i] = (shear_evals_min[i] > 0) ? 1 : -1;
         for (int j = 0; j < 3; j++)
             ori[3 * M1->npoin + 9 * nelem + 3 * i + j] = -1 * shear_evals_min[i] * shear_evects_3D_min[3 * i + j];
     }
@@ -872,7 +884,8 @@ int main(int argc, char const **argv){
             {"eigen_class", 1, nelem, eigen_class, SCA_int_VTK},
             {"EValue_max", 1, nelem, shear_evals_max, SCA_double_VTK},
             {"Shear_Von_Mises_Stress", 1, nelem, von_mises, SCA_double_VTK},
-            {"Eval_ratio", 1, nelem, eval_ratio, SCA_double_VTK}};            
+            {"Eval_ratio", 1, nelem, eval_ratio, SCA_double_VTK},
+            {"Melem", 1, nelem, Melem, SCA_int_VTK}};
     size_t countele4 = sizeof(prtelefield4) / sizeof(prtelefield4[0]);
     FunctionWithArgs prtpntfield4[] = {
         {"ori_sign", 1, (M1->npoin + M1->numExtraPoints), ori_sign, SCA_double_VTK},
@@ -881,6 +894,9 @@ int main(int argc, char const **argv){
     CHECK_ERROR(SaveVTK("./", "stress_analysis", 0, M1, tri3funcVTK, prtelefield4, countele4, prtpntfield4, countpnt4));
     free(extra_ptxyz3);
     free(new_normele3);
+    // analysis fiels on aneurysm and regions:
+    CHECK_ERROR(analzs(M1,area,Melem,region_ele,shear_evals_max,von_mises,past_filename,study,"von_mises.txt"));
+    CHECK_ERROR(analzs(M1,area,Melem,region_ele,shear_evals_max,eval_ratio,past_filename,study,"eval_ratio.txt"));
 #pragma region free_dynamics_alloc
     // free dynamics arraies
     free(elems);
@@ -889,6 +905,7 @@ int main(int argc, char const **argv){
     free(esure);
     free(esurp);
     free(esurp_ptr);
+    free(area);
     free(inp);
     free(row_ptr);
     free(val);
