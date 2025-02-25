@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <unistd.h>
 #include "string.h"
 #include "common.h"
 // mesh funcs and mesh types
@@ -27,6 +28,7 @@
 
 int files(void);
 int dirs(void);
+int file_exists(const char *path);
 int main(int argc, char const **argv)
 {
 #pragma region argument
@@ -240,10 +242,23 @@ int main(int argc, char const **argv)
     // reading wall charectristics [colored fields] from .wall file//
     // label : <red=1, yellow=4, white=7, cyan=0, rupture=9, remain=0>
     int *Melem;
-    CHECK_ERROR(read_wallmask(past_datafilepath[2], nelem, inp, &Melem));
+    CHECK_ERROR(read_mask(past_datafilepath[2], nelem, inp, &Melem));
     if (Melem == NULL)
     {
-        fprintf(stderr, "! ERROR in allocation memory or reading read_wallmask.\n");
+        fprintf(stderr, "! ERROR in allocation memory or reading read_mask for wall colors.\n");
+        exit(EXIT_FAILURE);
+    }
+    // reading wall charectristics [colored fields] from .wall file//
+    // label : <red=1, yellow=4, white=7, cyan=0, rupture=9, remain=0
+    int *bleb;
+    if (file_exists(past_datafilepath[5])) {
+        CHECK_ERROR(read_mask(past_datafilepath[5], nelem, inp, &bleb));
+    }else{
+        bleb = calloc((size_t)nelem, sizeof(int));
+    }
+    if (bleb == NULL)
+    {
+        fprintf(stderr, "! ERROR in allocation memory or reading read_mask for bleb.\n");
         exit(EXIT_FAILURE);
     }
     // find a boundary condition
@@ -335,6 +350,7 @@ int main(int argc, char const **argv)
             {"BC", 1, nelem, cell_stat, SCA_int_VTK},
             {"regions", 1, nelem, region_ele, SCA_int_VTK},
             {"Melem", 1, nelem, Melem, SCA_int_VTK},
+            {"bleb", 1, nelem, bleb, SCA_int_VTK},
         };
     size_t countele = sizeof(prtelefield) / sizeof(prtelefield[0]);
     FunctionWithArgs prtpntfield[] = {
@@ -895,9 +911,9 @@ int main(int argc, char const **argv)
     free(extra_ptxyz3);
     free(new_normele3);
     // analysis fiels on aneurysm and regions:
-    CHECK_ERROR(analz_double(M1,area,Melem,region_ele,shear_evals_max,von_mises,past_filename,study,"von_mises.txt"));
-    CHECK_ERROR(analz_double(M1,area,Melem,region_ele,shear_evals_max,eval_ratio,past_filename,study,"eval_ratio.txt"));
-    CHECK_ERROR(analz_int(M1,area,Melem,region_ele,shear_evals_max,eigen_class,past_filename,study,"eigen_class.txt"));
+    CHECK_ERROR(analz_double(M1,area,Melem,region_ele,bleb,shear_evals_max,von_mises,past_filename,study,"von_mises.txt"));
+    CHECK_ERROR(analz_double(M1,area,Melem,region_ele,bleb,shear_evals_max,eval_ratio,past_filename,study,"eval_ratio.txt"));
+    CHECK_ERROR(analz_int(M1,area,Melem,region_ele,bleb,shear_evals_max,eigen_class,past_filename,study,"eigen_class.txt"));
 #pragma region free_dynamics_alloc
     // free dynamics arraies
     free(elems);
@@ -933,6 +949,7 @@ int main(int argc, char const **argv)
     free(region_ele);
     free(region_p);
     free(Melem);
+    free(bleb);
     free(von_mises);
     free(eigen_class);
     free(eigen_class_disturb);
@@ -962,6 +979,11 @@ int files(void)
     strcat(past_datafilepath[2], ".");
     strcat(past_datafilepath[2], "wall");
 
+    strcpy(past_datafilepath[5], pst_datadir);
+    strcat(past_datafilepath[5], past_filename);
+    strcat(past_datafilepath[5], ".");
+    strcat(past_datafilepath[5], "bleb");
+
     strcpy(past_datafilepath[3], pst_datadir);
     strcat(past_datafilepath[3], "labels_srf.zfem");
 
@@ -990,4 +1012,7 @@ int dirs(void)
     strcpy(pst_datadir, "../data/");
 
     return 0;
+}
+int file_exists(const char *path) {
+    return access(path, F_OK) == 0; // Returns 1 if file exists, 0 otherwise
 }

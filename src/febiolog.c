@@ -6,6 +6,23 @@
 #include "input_type.h"
 #include "common.h"
 #include "mesh.h"
+const char* get_file_format_by_extension(const char *filename) {
+    const char *dot = strrchr(filename, '.'); // Find the last occurrence of '.'
+    if (!dot || dot == filename) return "Unknown"; // No extension found
+
+    if (strcmp(dot, ".txt") == 0) return "Text File";
+    if (strcmp(dot, ".c") == 0) return "C Source File";
+    if (strcmp(dot, ".h") == 0) return "C Header File";
+    if (strcmp(dot, ".jpg") == 0 || strcmp(dot, ".jpeg") == 0) return "JPEG Image";
+    if (strcmp(dot, ".png") == 0) return "PNG Image";
+    if (strcmp(dot, ".bin") == 0) return "Binary File";
+    if (strcmp(dot, ".csv") == 0) return "CSV File";
+    if (strcmp(dot, ".pdf") == 0) return "PDF Document";
+    if (strcmp(dot, ".zip") == 0) return "ZIP Archive";
+    if (strcmp(dot, ".wall") == 0) return "WALL MASK";
+    
+    return "Unknown Format";
+}
 // read stress tensor in the log file of febio
 int readfebiolog(char *path,int nelem2, double **st2, read_time logtime)
 {
@@ -101,22 +118,27 @@ int readfebiolog(char *path,int nelem2, double **st2, read_time logtime)
     *st2 = st;
     return e;
 }
-int read_wallmask(char *path,int nelem, input *inp, int **Melem2)
+int read_mask(char *path,int nelem, input *inp, int **Mask2)
 {
     int e = 0;
-    int *Melem = calloc((size_t)nelem, sizeof(*Melem));
-    if (Melem == NULL)
+    int *Mask = calloc((size_t)nelem, sizeof(*Mask));
+    if (Mask == NULL)
     {
         fprintf(stderr, "Memory allocation failed for Melem.\n");
         return -1;
     }
-
+    // specified the mask file 
+    int color_mask = 0;
+    if (!strcmp((get_file_format_by_extension(path)),"WALL MASK")) {
+        color_mask = 1;
+        printf("** this wall mask!\n");
+    }
     /* Open the file */
     FILE *fptr = fopen(path, "r");
     if (fptr == NULL)
     {
         fprintf(stderr, "ERROR: Cannot open file - %s.\n", path);
-        free(Melem); // Free allocated memory before returning
+        free(Mask); // Free allocated memory before returning
         return -1;
     }
 
@@ -134,18 +156,21 @@ int read_wallmask(char *path,int nelem, input *inp, int **Melem2)
         if (nscan != 1)
         {
             fprintf(stderr, "ERROR: Incorrect number of entries on POINTS line.\n");
-            free(Melem);  // Free before returning
+            free(Mask);  // Free before returning
             fclose(fptr); // Close the file before returning
             return -1;
         }
-
-        // Check the value of the Melem
-        for (int k = 0; k < inp->label_num; k++)
-        {
-            if (temp == inp->label[k])
+        if (color_mask==1){
+            // Check the value of the Melem
+            for (int k = 0; k < inp->label_num; k++)
             {
-                Melem[iline] = inp->label[k];
+                if (temp == inp->label[k])
+                {
+                    Mask[iline] = inp->label[k];
+                }
             }
+        }else{
+            Mask[iline] = temp;
         }
     }
 
@@ -153,13 +178,13 @@ int read_wallmask(char *path,int nelem, input *inp, int **Melem2)
     if (fclose(fptr) == EOF)
     {
         printf("Error closing %s\n", path);
-        free(Melem); // Free before returning in case of error
+        free(Mask); // Free before returning in case of error
         return -1;
     }
 
     /* Assign the allocated array to the output pointer */
-    *Melem2 = Melem;
-    printf("* Done reading .WALL mask file!\n");
+    *Mask2 = Mask;
+    printf("* Done reading %s mask file!\n",path);
 
     return e;
 }
