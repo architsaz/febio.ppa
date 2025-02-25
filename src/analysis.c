@@ -606,9 +606,6 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
     for (int ele = 0;ele<M->nelem;ele++){
         if (bleb[ele]>num_bleb) num_bleb=bleb[ele];
     }
-    // Debug prints
-    printf("M->nelem: %d\n", M->nelem);
-    printf("num_bleb: %d\n", num_bleb);
     if (num_bleb > 0) {
         area_bleb = (double **)calloc((size_t)num_bleb, sizeof(double *));
         field_bleb = (int **)calloc((size_t)num_bleb, sizeof(int *));

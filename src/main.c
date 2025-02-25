@@ -251,9 +251,12 @@ int main(int argc, char const **argv)
     // reading wall charectristics [colored fields] from .wall file//
     // label : <red=1, yellow=4, white=7, cyan=0, rupture=9, remain=0
     int *bleb;
-    if (file_exists(past_datafilepath[5])) {
+    if (file_exists(past_datafilepath[5]))
+    {
         CHECK_ERROR(read_mask(past_datafilepath[5], nelem, inp, &bleb));
-    }else{
+    }
+    else
+    {
         bleb = calloc((size_t)nelem, sizeof(int));
     }
     if (bleb == NULL)
@@ -294,7 +297,6 @@ int main(int argc, char const **argv)
     M1->nredge = Nredge;
     M1->open = open;
     M1->ptxyz = ptxyz;
-#ifdef DEBUG
     // coordinate
     M1->numExtraPoints = nelem + 3 * nelem;
     double *extra_ptxyz = calloc((size_t)M1->numExtraPoints * 3, sizeof(double));
@@ -359,7 +361,6 @@ int main(int argc, char const **argv)
     CHECK_ERROR(SaveVTK("./", "check_mesh_mask", 0, M1, tri3funcVTK, prtelefield, countele, prtpntfield, countpnt));
     free(new_normele);
     free(extra_ptxyz);
-#endif
 #pragma region solve_Poisson
     // define sparse matrix of coefficient
     int *row_ptr = (int *)calloc((size_t)(nelem + 1), sizeof(int));
@@ -911,9 +912,9 @@ int main(int argc, char const **argv)
     free(extra_ptxyz3);
     free(new_normele3);
     // analysis fiels on aneurysm and regions:
-    CHECK_ERROR(analz_double(M1,area,Melem,region_ele,bleb,shear_evals_max,von_mises,past_filename,study,"von_mises.txt"));
-    CHECK_ERROR(analz_double(M1,area,Melem,region_ele,bleb,shear_evals_max,eval_ratio,past_filename,study,"eval_ratio.txt"));
-    CHECK_ERROR(analz_int(M1,area,Melem,region_ele,bleb,shear_evals_max,eigen_class,past_filename,study,"eigen_class.txt"));
+    CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, von_mises, past_filename, study, "von_mises.txt"));
+    CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, eval_ratio, past_filename, study, "eval_ratio.txt"));
+    CHECK_ERROR(analz_int(M1, area, Melem, region_ele, bleb, shear_evals_max, eigen_class, past_filename, study, "eigen_class.txt"));
 #pragma region free_dynamics_alloc
     // free dynamics arraies
     free(elems);
@@ -1013,6 +1014,7 @@ int dirs(void)
 
     return 0;
 }
-int file_exists(const char *path) {
+int file_exists(const char *path)
+{
     return access(path, F_OK) == 0; // Returns 1 if file exists, 0 otherwise
 }

@@ -4,11 +4,11 @@ code_name=EXEC_ppa
 # machines=("ishtar" "loki" "hades" "attila" "marduk" "heise")
 machines=("ishtar")
 # List of cases
-if [ -f /dagon1/achitsaz/runfebio/ready_to_run.txt ];then 
-    cases=($(cat /dagon1/achitsaz/runfebio/ready_to_run.txt))
+if [ -f /dagon1/achitsaz/runfebio/successful_cases.txt ];then 
+    cases=($(cat /dagon1/achitsaz/runfebio/successful_cases.txt))
 else
     dir_root=/dagon1/achitsaz/runfebio
-    echo "ERROR: the ready_to_run.txt does not exist in this path: $dir_root"  
+    echo "ERROR: the successful_cases.txt does not exist in this path: $dir_root"  
     exit
 fi
  
