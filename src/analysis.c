@@ -199,14 +199,14 @@ void mystat_int(int *arr, int n, int *all_class, int num_class, double *area, do
     *frequency_class2 = frequency_class;
 }
 // analysis double fields in different regions and colored areas
-int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, double *Eval_max, double *field, char *casename, char *study, char *filename)
+int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, double *Eval_max, double *field, char *casename, char *study, char *filename, char *field_name)
 {
     int e = 0;
 
-    int nele_red, nele_yel, nele_wht, nele_rupt, nele_press, nele_dom, nele_bod, nele_nek, nele_part, nele_aneu, *nele_bleb;
-    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = 0;
-    double *field_red, *field_yel, *field_wht, *field_rupt, *field_press, *field_aneu, *field_dom, *field_bod, *field_nek, *field_part;
-    double *area_red, *area_yel, *area_wht, *area_rupt, *area_press, *area_aneu, *area_dom, *area_bod, *area_nek, *area_part;
+    int nele_red, nele_yel, nele_wht, nele_rupt, nele_press, nele_dom, nele_bod, nele_nek, nele_part, nele_aneu, *nele_bleb, nele_all_bleb;
+    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = nele_all_bleb =0;
+    double *field_red, *field_yel, *field_wht, *field_rupt, *field_press, *field_aneu, *field_dom, *field_bod, *field_nek, *field_part, *field_all_bleb;
+    double *area_red, *area_yel, *area_wht, *area_rupt, *area_press, *area_aneu, *area_dom, *area_bod, *area_nek, *area_part, *area_all_bleb;
     // Dynamically allocate area_bleb and field_bleb
     double **area_bleb = NULL;
     double **field_bleb = NULL;
@@ -260,8 +260,10 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
             nele_part++;
         if (relems[ele] == 4 || relems[ele] == 8 || relems[ele] == 16)
             nele_aneu++;
-        if (bleb[ele]!=0)
+        if (bleb[ele]!=0){
             nele_bleb[bleb[ele]-1]++;
+            nele_all_bleb++;
+        }
     }
     #ifdef DEBUG
     printf("nele_press: %d \n", nele_press);
@@ -275,6 +277,7 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
     printf("nele_part: %d \n", nele_part);
     printf("nele_aneu: %d \n", nele_aneu);
     for(int i=0;i<num_bleb;i++) printf("nele_bleb.%d: %d \n",i+1, nele_bleb[i]);
+    if (num_bleb>0) printf("nele_all_bleb: %d \n", nele_all_bleb);
     #endif
     field_red = calloc((size_t)nele_red, sizeof(double));
     field_yel = calloc((size_t)nele_yel, sizeof(double));
@@ -286,6 +289,7 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
     field_bod = calloc((size_t)nele_bod, sizeof(double));
     field_nek = calloc((size_t)nele_nek, sizeof(double));
     field_part = calloc((size_t)nele_part, sizeof(double));
+    if (num_bleb>0) field_all_bleb = calloc((size_t)nele_all_bleb, sizeof(double));
     area_red = calloc((size_t)nele_red, sizeof(double));
     area_yel = calloc((size_t)nele_yel, sizeof(double));
     area_wht = calloc((size_t)nele_wht, sizeof(double));
@@ -296,7 +300,8 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
     area_bod = calloc((size_t)nele_bod, sizeof(double));
     area_nek = calloc((size_t)nele_nek, sizeof(double));
     area_part = calloc((size_t)nele_part, sizeof(double));
-    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = 0;
+    if (num_bleb>0) area_all_bleb = calloc((size_t)nele_all_bleb, sizeof(double));
+    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = nele_all_bleb = 0;
     for(int i=0;i<num_bleb;i++) nele_bleb[i]=0;
     for (int ele = 0; ele < M->nelem; ele++)
     {
@@ -371,11 +376,14 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
             field_bleb[bleb[ele]-1][nele_bleb[bleb[ele]-1]]=fabs(field[ele]);
             area_bleb[bleb[ele]-1][nele_bleb[bleb[ele]-1]]= area[ele];
             nele_bleb[bleb[ele]-1]++;
+            field_all_bleb[nele_all_bleb]=fabs(field[ele]);
+            area_all_bleb[nele_all_bleb]= area[ele];
+            nele_all_bleb++;
         }
         
     }
     // Calculate statistics
-    double *stat_red, *stat_yel, *stat_wht, *stat_rupt, *stat_aneu, *stat_dom, *stat_bod, *stat_nek, *stat_part, *stat_press;
+    double *stat_red, *stat_yel, *stat_wht, *stat_rupt, *stat_aneu, *stat_dom, *stat_bod, *stat_nek, *stat_part, *stat_press, *stat_all_bleb;
     double stat_empty[4] = {0, 0, 0, 0};
     if (nele_red != 0)
     {
@@ -415,6 +423,7 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
     mystat_double(field_nek, nele_nek, area_nek, &stat_nek);
     mystat_double(field_part, nele_part, area_part, &stat_part);
     mystat_double(field_press, nele_press, area_press, &stat_press);
+    if (num_bleb>0) mystat_double(field_all_bleb, nele_all_bleb, area_all_bleb, &stat_all_bleb);
     for(int i=0;i<num_bleb;i++) mystat_double(field_bleb[i], nele_bleb[i], area_bleb[i], &stat_bleb[i]);
     #ifdef DEBUG
     printf("red: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_red, nele_red), stat_red[0], stat_red[1], stat_red[2], stat_red[3]);
@@ -427,6 +436,7 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
     printf("ane: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_aneu, nele_aneu), stat_aneu[0], stat_aneu[1], stat_aneu[2], stat_aneu[3]);
     printf("par: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_part, nele_part), stat_part[0], stat_part[1], stat_part[2], stat_part[3]);
     printf("pre: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_press, nele_press), stat_press[0], stat_press[1], stat_press[2], stat_press[3]);
+    if (num_bleb>0)printf("all_bleb: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n", sumarr(area_all_bleb, nele_all_bleb), stat_all_bleb[0], stat_all_bleb[1], stat_all_bleb[2], stat_all_bleb[3]);
     for(int i=0;i<num_bleb;i++) printf("bleb.%d: area: %0.5lf mean: %9.2lf max: %9.2lf min: %9.2lf stddev: %9.2lf\n",i, sumarr(area_bleb[i], nele_bleb[i]), stat_bleb[i][0], stat_bleb[i][1], stat_bleb[i][2], stat_bleb[i][3]);
     #endif
     // save in a table txt
@@ -475,14 +485,32 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
     DataType types1[] = {STRING_TYPE, STRING_TYPE, STRING_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE};
 
     // Array of column headers (names)
-    const char *headers1[] = {"Casename", "Study", "stat_para", "stat_aneu", "stat_red", "stat_yel", "stat_wht", "stat_rupt", "stat_dom", "stat_bod", "stat_nek", "stat_part", "stat_press"};
-
+    const char *headers11[] = {"Casename", "Study", "stat_para", "aneu", "red", "yel", "wht", "rupt", "dom", "bod", "nek", "part", "press"};
+    char **headers1 = (char **)calloc((size_t)numArrays1, sizeof(char *));
+    if (!headers1) {
+        printf("Memory allocation headers1\n");
+        return 1;
+    }
+    for (int i=0;i<numArrays1;i++)
+    {
+        headers1[i] = (char *)malloc(50); // Allocate space for name
+        if (!headers1[i]) {
+            printf("Memory allocation failed for headers1\n");
+            return 1;
+        }
+        strcpy(headers1[i],headers11[i]);
+    }
+    for (int i=3;i<numArrays1;i++){
+        strcat(headers1[i],"_");
+        strcat(headers1[i],field_name);
+    }
     // added bleb
     // Allocate memory
-    int *sizes = (int *)calloc((size_t)num_bleb + (size_t)numArrays1, sizeof(int));
-    void **arrays = (void **)calloc((size_t)num_bleb + (size_t)numArrays1, sizeof(void *));
-    DataType *types = (DataType *)calloc((size_t)num_bleb + (size_t)numArrays1, sizeof(DataType));
-    char **headers = (char **)calloc((size_t)num_bleb + (size_t)numArrays1, sizeof(char *));
+    int numArrays = (num_bleb>0) ? (num_bleb+numArrays1+1) : numArrays1 ;
+    int *sizes = (int *)calloc((size_t)numArrays, sizeof(int));
+    void **arrays = (void **)calloc((size_t)numArrays, sizeof(void *));
+    DataType *types = (DataType *)calloc((size_t)numArrays, sizeof(DataType));
+    char **headers = (char **)calloc((size_t)numArrays, sizeof(char *));
 
     if (!sizes || !arrays || !types || !headers) {
         printf("Memory allocation failed\n");
@@ -509,15 +537,31 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
         types[numArrays1 + i] = DOUBLE_TYPE;
 
         // Allocate memory for headers[i] and create name dynamically
-        headers[numArrays1 + i] = (char *)malloc(20); // Allocate space for name
+        headers[numArrays1 + i] = (char *)malloc(50); // Allocate space for name
         if (!headers[numArrays1 + i]) {
             printf("Memory allocation failed for headers\n");
             return 1;
         }
-        sprintf(headers[numArrays1 + i], "stat_bleb.%d", i);
+        sprintf(headers[numArrays1 + i], "bleb.%d", i);
+        strcat(headers[numArrays1 + i],"_");
+        strcat(headers[numArrays1 + i],field_name);
+    }
+    if ( num_bleb>0) {
+        sizes[numArrays1 + num_bleb] = 4;
+        arrays[numArrays1 + num_bleb] = (void *)stat_all_bleb;
+        types[numArrays1 + num_bleb] = DOUBLE_TYPE;
+
+        // Allocate memory for headers[i] and create name dynamically
+        headers[numArrays1 + num_bleb] = (char *)malloc(50); // Allocate space for name
+        if (!headers[numArrays1 + num_bleb]) {
+            printf("Memory allocation failed for headers\n");
+            return 1;
+        }
+        strcpy(headers[numArrays1 + num_bleb], "all_bleb");
+        strcat(headers[numArrays1 + num_bleb],"_");
+        strcat(headers[numArrays1 + num_bleb],field_name);
     }
 
-    int numArrays = num_bleb + numArrays1;
     
     // Save the arrays to the file with headers
     saveMultipleArraysToFile(filename, numArrays, arrays, sizes, types, (const char **)headers);
@@ -526,10 +570,14 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
     for (int i = 0; i < numArrays; i++) {
         free(headers[i]);
     }
+    for (int i = 0; i < numArrays1; i++) {
+        free(headers1[i]);
+    }
     free(sizes);
     free(arrays);
     free(types);
     free(headers);
+    free(headers1);
     for (int i = 0; i < 4; i++)
     {
         free(arr1[i]); // Free memory allocated for arr1
@@ -546,6 +594,9 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
         free(field_bleb);
         free(nele_bleb);
         free(stat_bleb);
+        free(area_all_bleb);
+        free(field_all_bleb);
+        free(stat_all_bleb);
     }
     // Free the dynamically allocated smax and area arrays
     free(field_red);
@@ -590,13 +641,13 @@ int analz_double(mesh *M, double *area, int *Melem, int *relems, int *bleb, doub
     return e;
 }
 // analysis int fields in different regions and colored areas
-int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double *Eval_max, int *field, char *casename, char *study, char *filename){
+int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double *Eval_max, int *field, char *casename, char *study, char *filename, char *field_name){
     int e = 0;
 
-    int nele_red, nele_yel, nele_wht, nele_rupt, nele_press, nele_dom, nele_bod, nele_nek, nele_part, nele_aneu,*nele_bleb;
-    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = 0;
-    int *field_red, *field_yel, *field_wht, *field_rupt, *field_press, *field_aneu, *field_dom, *field_bod, *field_nek, *field_part;
-    double *area_red, *area_yel, *area_wht, *area_rupt, *area_press, *area_aneu, *area_dom, *area_bod, *area_nek, *area_part;
+    int nele_red, nele_yel, nele_wht, nele_rupt, nele_press, nele_dom, nele_bod, nele_nek, nele_part, nele_aneu,*nele_bleb,nele_all_bleb;
+    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = nele_all_bleb = 0;
+    int *field_red, *field_yel, *field_wht, *field_rupt, *field_press, *field_aneu, *field_dom, *field_bod, *field_nek, *field_part, *field_all_bleb;
+    double *area_red, *area_yel, *area_wht, *area_rupt, *area_press, *area_aneu, *area_dom, *area_bod, *area_nek, *area_part, *area_all_bleb;
     // Dynamically allocate area_bleb and field_bleb
     double **area_bleb = NULL;
     int **field_bleb = NULL;
@@ -673,8 +724,10 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
             nele_part++;
         if (relems[ele] == 4 || relems[ele] == 8 || relems[ele] == 16)
             nele_aneu++;
-        if (bleb[ele]!=0)
+        if (bleb[ele]!=0){
             nele_bleb[bleb[ele]-1]++;
+            nele_all_bleb++;
+        }
     }
     #ifdef DEBUG
         printf("nele_press: %d \n", nele_press);
@@ -687,6 +740,7 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
         printf("nele_nek: %d \n", nele_nek);
         printf("nele_part: %d \n", nele_part);
         printf("nele_aneu: %d \n", nele_aneu);
+        if (num_bleb>0) printf("nele_all_bleb: %d \n", nele_all_bleb);
         for(int i=0;i<num_bleb;i++) printf("nele_bleb.%d: %d \n",i+1, nele_bleb[i]);
     #endif
     field_red = calloc((size_t)nele_red, sizeof(int));
@@ -699,6 +753,7 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
     field_bod = calloc((size_t)nele_bod, sizeof(int));
     field_nek = calloc((size_t)nele_nek, sizeof(int));
     field_part = calloc((size_t)nele_part, sizeof(int));
+    if (num_bleb>0) field_all_bleb = calloc((size_t)nele_all_bleb, sizeof(int));
 
     area_red = calloc((size_t)nele_red, sizeof(double));
     area_yel = calloc((size_t)nele_yel, sizeof(double));
@@ -710,7 +765,8 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
     area_bod = calloc((size_t)nele_bod, sizeof(double));
     area_nek = calloc((size_t)nele_nek, sizeof(double));
     area_part = calloc((size_t)nele_part, sizeof(double));
-    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = 0;
+    if (num_bleb>0) area_all_bleb = calloc((size_t)nele_all_bleb, sizeof(double));
+    nele_red = nele_yel = nele_wht = nele_rupt = nele_press = nele_dom = nele_bod = nele_nek = nele_part = nele_aneu = nele_all_bleb = 0;
     for(int i=0;i<num_bleb;i++) nele_bleb[i]=0;
     for (int ele = 0; ele < M->nelem; ele++)
     {
@@ -785,10 +841,13 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
             field_bleb[bleb[ele]-1][nele_bleb[bleb[ele]-1]]=field[ele];
             area_bleb[bleb[ele]-1][nele_bleb[bleb[ele]-1]]= area[ele];
             nele_bleb[bleb[ele]-1]++;
+            field_all_bleb[nele_all_bleb] = field[ele];
+            area_all_bleb[nele_all_bleb] = area[ele];
+            nele_all_bleb++;
         }
     }
     // Calculate statistics
-    double *stat_red, *stat_yel, *stat_wht, *stat_rupt, *stat_aneu, *stat_dom, *stat_bod, *stat_nek, *stat_part, *stat_press;
+    double *stat_red, *stat_yel, *stat_wht, *stat_rupt, *stat_aneu, *stat_dom, *stat_bod, *stat_nek, *stat_part, *stat_press, *stat_all_bleb;
     double *stat_empty = (double *)calloc((size_t)num_class_field,sizeof(double));
     if (nele_red != 0)
     {
@@ -828,6 +887,7 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
     mystat_int(field_nek, nele_nek, all_class_field, num_class_field, area_nek, &stat_nek);
     mystat_int(field_part, nele_part, all_class_field, num_class_field, area_part, &stat_part);
     mystat_int(field_press, nele_press, all_class_field, num_class_field, area_press, &stat_press);
+    if (num_bleb>0) mystat_int(field_all_bleb, nele_all_bleb, all_class_field, num_class_field, area_all_bleb, &stat_all_bleb);
     for(int i=0;i<num_bleb;i++) mystat_int(field_bleb[i], nele_bleb[i],all_class_field, num_class_field, area_bleb[i], &stat_bleb[i]);
     #ifdef DEBUG
         printf("all class in filed: ");
@@ -863,6 +923,11 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
         printf("pressurized region: ");
         for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_press[i]);
         printf("\n");
+        if (num_bleb>0){
+            printf("all bleb region: ");
+            for (int i=0;i<num_class_field;i++) printf("%.2lf ",stat_all_bleb[i]);
+            printf("\n");
+        }
         for(int i=0;i<num_bleb;i++) {
             printf("bleb.%d region: ",i);
             for (int j=0;j<num_class_field;j++) printf("%.2lf ",stat_bleb[i][j]);
@@ -914,14 +979,32 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
     DataType types1[] = {STRING_TYPE, STRING_TYPE, INT_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE};
 
     // Array of column headers (names)
-    const char *headers1[] = {"Casename", "Study", "field_class", "dist_aneu", "dist_red", "dist_yel", "dist_wht", "dist_rupt", "dist_dom", "dist_bod", "dist_nek", "dist_part", "dist_press"};
-
+    const char *headers11[] = {"Casename", "Study", "stat_para", "aneu", "red", "yel", "wht", "rupt", "dom", "bod", "nek", "part", "press"};
+    char **headers1 = (char **)calloc((size_t)numArrays1, sizeof(char *));
+    if (!headers1) {
+        printf("Memory allocation headers1\n");
+        return 1;
+    }
+    for (int i=0;i<numArrays1;i++)
+    {
+        headers1[i] = (char *)malloc(50); // Allocate space for name
+        if (!headers1[i]) {
+            printf("Memory allocation failed for headers1\n");
+            return 1;
+        }
+        strcpy(headers1[i],headers11[i]);
+    }
+    for (int i=3;i<numArrays1;i++){
+        strcat(headers1[i],"_");
+        strcat(headers1[i],field_name);
+    }
     // added bleb
     // Allocate memory
-    int *sizes = (int *)calloc((size_t)num_bleb + (size_t)numArrays1, sizeof(int));
-    void **arrays = (void **)calloc((size_t)num_bleb + (size_t)numArrays1, sizeof(void *));
-    DataType *types = (DataType *)calloc((size_t)num_bleb + (size_t)numArrays1, sizeof(DataType));
-    char **headers = (char **)calloc((size_t)num_bleb + (size_t)numArrays1, sizeof(char *));
+    int numArrays = (num_bleb>0) ? (num_bleb+numArrays1+1) : numArrays1 ;
+    int *sizes = (int *)calloc((size_t)numArrays, sizeof(int));
+    void **arrays = (void **)calloc((size_t)numArrays, sizeof(void *));
+    DataType *types = (DataType *)calloc((size_t)numArrays, sizeof(DataType));
+    char **headers = (char **)calloc((size_t)numArrays, sizeof(char *));
 
     if (!sizes || !arrays || !types || !headers) {
         printf("Memory allocation failed\n");
@@ -948,15 +1031,31 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
         types[numArrays1 + i] = DOUBLE_TYPE;
 
         // Allocate memory for headers[i] and create name dynamically
-        headers[numArrays1 + i] = (char *)malloc(20); // Allocate space for name
+        headers[numArrays1 + i] = (char *)malloc(50); // Allocate space for name
         if (!headers[numArrays1 + i]) {
             printf("Memory allocation failed for headers\n");
             return 1;
         }
-        sprintf(headers[numArrays1 + i], "stat_bleb.%d", i);
+        sprintf(headers[numArrays1 + i], "bleb.%d", i);
+        strcat(headers[numArrays1 + i],"_");
+        strcat(headers[numArrays1 + i],field_name);
+    }
+    if ( num_bleb>0) {
+        sizes[numArrays1 + num_bleb] = 4;
+        arrays[numArrays1 + num_bleb] = (void *)stat_all_bleb;
+        types[numArrays1 + num_bleb] = DOUBLE_TYPE;
+
+        // Allocate memory for headers[i] and create name dynamically
+        headers[numArrays1 + num_bleb] = (char *)malloc(50); // Allocate space for name
+        if (!headers[numArrays1 + num_bleb]) {
+            printf("Memory allocation failed for headers\n");
+            return 1;
+        }
+        strcpy(headers[numArrays1 + num_bleb], "all_bleb");
+        strcat(headers[numArrays1 + num_bleb],"_");
+        strcat(headers[numArrays1 + num_bleb],field_name);
     }
 
-    int numArrays = num_bleb + numArrays1;
     // Save the arrays to the file with headers
     saveMultipleArraysToFile(filename, numArrays, arrays, sizes, types, (const char **)headers);
 
@@ -964,10 +1063,14 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
     for (int i = 0; i < numArrays; i++) {
         free(headers[i]);
     }
+    for (int i = 0; i < numArrays1; i++) {
+        free(headers1[i]);
+    }
     free(sizes);
     free(arrays);
     free(types);
     free(headers);
+    free(headers1);
     for (int i = 0; i < num_class_field; i++)
     {
         free(arr1[i]); // Free memory allocated for arr1
@@ -984,6 +1087,9 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
         free(field_bleb);
         free(nele_bleb);
         free(stat_bleb);
+        free(field_all_bleb);
+        free(area_all_bleb);
+        free(stat_all_bleb);
     }
 
     // Free the dynamically allocated smax and area arrays
@@ -997,6 +1103,7 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
     free(field_bod);
     free(field_nek);
     free(field_part);
+    
 
     free(area_red);
     free(area_yel);
@@ -1008,6 +1115,7 @@ int analz_int(mesh *M, double *area, int *Melem, int *relems, int *bleb, double 
     free(area_bod);
     free(area_nek);
     free(area_part);
+    
 
     // Free dynamically allocated stat arrays if they are not pointing to stat_empty
     if (stat_red != stat_empty)

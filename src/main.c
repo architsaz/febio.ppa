@@ -912,9 +912,9 @@ int main(int argc, char const **argv)
     free(extra_ptxyz3);
     free(new_normele3);
     // analysis fiels on aneurysm and regions:
-    CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, von_mises, past_filename, study, "von_mises.txt"));
-    CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, eval_ratio, past_filename, study, "eval_ratio.txt"));
-    CHECK_ERROR(analz_int(M1, area, Melem, region_ele, bleb, shear_evals_max, eigen_class, past_filename, study, "eigen_class.txt"));
+    CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, von_mises, past_filename, study, "von_mises.txt","von_mises"));
+    CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, eval_ratio, past_filename, study, "eval_ratio.txt","eval_ratio"));
+    CHECK_ERROR(analz_int(M1, area, Melem, region_ele, bleb, shear_evals_max, eigen_class, past_filename, study, "eigen_class.txt", "eigen_class"));
 #pragma region free_dynamics_alloc
     // free dynamics arraies
     free(elems);
