@@ -715,7 +715,7 @@ int main(int argc, char const **argv)
     // Calculate the Von Mises Stress
     double *von_mises = (double *)malloc((size_t)nelem * sizeof(double));
     for (int ele = 0; ele < nelem; ele++)
-        von_mises[ele] = sqrt(SQUARE(shear_evals_max[ele]) + SQUARE(shear_evals_min[ele]));
+        von_mises[ele] = sqrt(SQUARE(shear_evals_max[ele]) + SQUARE(shear_evals_min[ele]) - shear_evals_max[ele]*shear_evals_min[ele] );
 
     // calculate mask according sign of eigen values
     int *eigen_class = (int *)calloc((size_t)nelem, sizeof(int));
@@ -913,6 +913,7 @@ int main(int argc, char const **argv)
     free(new_normele3);
     // analysis fiels on aneurysm and regions:
     CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, von_mises, past_filename, study, "von_mises.txt","von_mises"));
+    CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, shear_evals_max, past_filename, study, "max_eigen.txt","max_eigen"));
     CHECK_ERROR(analz_double(M1, area, Melem, region_ele, bleb, shear_evals_max, eval_ratio, past_filename, study, "eval_ratio.txt","eval_ratio"));
     CHECK_ERROR(analz_int(M1, area, Melem, region_ele, bleb, shear_evals_max, eigen_class, past_filename, study, "eigen_class.txt", "eigen_class"));
 #pragma region free_dynamics_alloc
