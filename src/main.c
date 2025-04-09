@@ -898,6 +898,7 @@ int main(int argc, char const **argv)
     FunctionWithArgs prtelefield4[] =
         {
             {"uni/bi_region", 1, nelem, sdir, SCA_int_VTK},
+            {"area", 1, nelem, area, SCA_double_VTK},
             {"eigen_class", 1, nelem, eigen_class, SCA_int_VTK},
             {"EValue_max", 1, nelem, shear_evals_max, SCA_double_VTK},
             {"Shear_Von_Mises_Stress", 1, nelem, von_mises, SCA_double_VTK},
