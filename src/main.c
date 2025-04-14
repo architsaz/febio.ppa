@@ -721,9 +721,7 @@ int main(int argc, char const **argv)
     int *eigen_class = (int *)calloc((size_t)nelem, sizeof(int));
     for (int ele = 0; ele < nelem; ele++)
     {
-
-        if (sdir[ele] == 2)
-        {
+        if (abs(shear_evals_max[ele])>10){
             if (shear_evals_max[ele] > 0 && shear_evals_min[ele] > 0)
                 eigen_class[ele] = 1;
             if (shear_evals_max[ele] > 0 && shear_evals_min[ele] < 0)
@@ -733,13 +731,7 @@ int main(int argc, char const **argv)
             if (shear_evals_max[ele] < 0 && shear_evals_min[ele] < 0)
                 eigen_class[ele] = 4;
         }
-        if (sdir[ele] == 1)
-        {
-            if (shear_evals_max[ele] > 0)
-                eigen_class[ele] = 5;
-            if (shear_evals_max[ele] < 0)
-                eigen_class[ele] = 6;
-        }
+        
     }
     // find disturbution in each class just for aneurysm
     int *eigen_class_disturb = (int *)calloc((size_t)nelem, sizeof(int));
