@@ -1,6 +1,6 @@
-table_name="von_mises.txt"
+table_name="eigen_class.txt"
 study_names=("pst.1" "pst.2")
-output_filename="combin_von_mises.txt"
+output_filename="combin_eigen_class.txt"
 if [ -f "$output_filename" ]; then
     echo "ERROR: file $output_filename exist."
     exit 1

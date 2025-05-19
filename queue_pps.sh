@@ -28,11 +28,11 @@ run_case_on_machine () {
         # cp /dagon1/achitsaz/FEBio/scripts/input_homo.txt  input.txt
         # cd $code_dir/$dir_name/$2/msa.2/ 
         # cp /dagon1/achitsaz/FEBio/scripts/input_hete.txt  input.txt
-       cd $case_dir/$2/pst.2/
-       nohup $code_dir/$code_name -c $2 -s msa.2 > run.log 2>&1 &
+       cd $case_dir/$2/pst.1/
+       nohup $code_dir/$code_name -c $2 -s msa.1 > run.log 2>&1 &
     else
         #ssh $1 "mkdir $code_dir/$dir_name/$2/comp.1.2 && cd $code_dir/$dir_name/$2/comp.1.2/ && nohup $code_dir/scripts/build/ppa_exec -c $2 -s msa.1 msa.2 -i 0 0 > run.log 2>&1 &" &
-        ssh $1 "cd $case_dir/$2/pst.2/ && nohup $code_dir/$code_name -c $2 -s msa.2 > run.log 2>&1 &" &
+        ssh $1 "cd $case_dir/$2/pst.1/ && nohup $code_dir/$code_name -c $2 -s msa.1 > run.log 2>&1 &" &
     fi 
 }
 

@@ -264,18 +264,18 @@ int main(int argc, char const **argv)
         fprintf(stderr, "! ERROR in allocation memory or reading read_mask for bleb.\n");
         exit(EXIT_FAILURE);
     }
-    // find a boundary condition
-    int *cell_stat;
-    void *field1;
-    FunctionWithArgs2 prtreadfield[] = {
-        {"bc_mask", 1, nelem, &field1, read_VTK_int},
-    };
-    int countfield = sizeof(prtreadfield) / sizeof(prtreadfield[0]);
-    char BCfile[100];
-    strcpy(BCfile, past_filename);
-    strcat(BCfile, ".BC");
-    CHECK_ERROR(ReadVTK(pst_datadir, BCfile, 0, prtreadfield, countfield));
-    cell_stat = (int *)field1;
+    // // find a boundary condition
+    // int *cell_stat;
+    // void *field1;
+    // FunctionWithArgs2 prtreadfield[] = {
+    //     {"bc_mask", 1, nelem, &field1, read_VTK_int},
+    // };
+    // int countfield = sizeof(prtreadfield) / sizeof(prtreadfield[0]);
+    // char BCfile[100];
+    // strcpy(BCfile, past_filename);
+    // strcat(BCfile, ".BC");
+    // CHECK_ERROR(ReadVTK(pst_datadir, BCfile, 0, prtreadfield, countfield));
+    // cell_stat = (int *)field1;
 #pragma endregion required_mask
     // creat mesh struct
     mesh *M1 = (mesh *)malloc(sizeof(mesh));
@@ -349,7 +349,6 @@ int main(int argc, char const **argv)
     }
     FunctionWithArgs prtelefield[] =
         {
-            {"BC", 1, nelem, cell_stat, SCA_int_VTK},
             {"regions", 1, nelem, region_ele, SCA_int_VTK},
             {"Melem", 1, nelem, Melem, SCA_int_VTK},
             {"bleb", 1, nelem, bleb, SCA_int_VTK},
@@ -361,133 +360,147 @@ int main(int argc, char const **argv)
     CHECK_ERROR(SaveVTK("./", "check_mesh_mask", 0, M1, tri3funcVTK, prtelefield, countele, prtpntfield, countpnt));
     free(new_normele);
     free(extra_ptxyz);
-#pragma region solve_Poisson
-    // define sparse matrix of coefficient
-    int *row_ptr = (int *)calloc((size_t)(nelem + 1), sizeof(int));
-    int max_nnz = nelem * (Nredge + 1); // At most non-zero entries per row (element+neighbours)
-    double *val = (double *)malloc((size_t)max_nnz * sizeof(double));
-    int *col_ind = (int *)malloc((size_t)max_nnz * sizeof(int));
-    int nnz = 0;
-    double *RHS = (double *)calloc((size_t)nelem, sizeof(double));
-    if (row_ptr == NULL || val == NULL || col_ind == NULL || RHS == NULL)
-    {
-        printf("Memory allocation failed.\n");
-        return 1;
-    }
+// #pragma region solve_Poisson
+//     // define sparse matrix of coefficient
+//     int *row_ptr = (int *)calloc((size_t)(nelem + 1), sizeof(int));
+//     int max_nnz = nelem * (Nredge + 1); // At most non-zero entries per row (element+neighbours)
+//     double *val = (double *)malloc((size_t)max_nnz * sizeof(double));
+//     int *col_ind = (int *)malloc((size_t)max_nnz * sizeof(int));
+//     int nnz = 0;
+//     double *RHS = (double *)calloc((size_t)nelem, sizeof(double));
+//     if (row_ptr == NULL || val == NULL || col_ind == NULL || RHS == NULL)
+//     {
+//         printf("Memory allocation failed.\n");
+//         return 1;
+//     }
 
-    // calculate the symmetrical Positive Definite Coefficient martix and Right-Hand-Sided vector
-    int order_in_cells[] = {0, 1, 1, 2, 2, 0};
-    for (int ele = 0; ele < nelem; ele++)
-    {
-        nnz++;
-        int IDele = nnz - 1;
-        // Known cells
-        if (cell_stat[ele] > 0)
-        {
-            // equation for this element is u=Tb
-            val[IDele] = 1;
-            col_ind[IDele] = ele;
-            RHS[ele] = (cell_stat[ele] == 1) ? 1000 : 0;
-        }
-        else
-        {
-            // Unknown cells
-            for (int nei = 0; nei < Nredge; nei++)
-            {
-                int neighbor = esure[Nredge * ele + nei];
-                int lp1 = elems[Nredge * ele + order_in_cells[2 * nei]] - 1;
-                int lp2 = elems[Nredge * ele + order_in_cells[2 * nei + 1]] - 1;
-                double dA = 0;
-                dA = SQUARE((ptxyz[3 * lp1] - ptxyz[3 * lp2]));          // x-coordinate
-                dA += SQUARE((ptxyz[3 * lp1 + 1] - ptxyz[3 * lp2 + 1])); // y-coordinate
-                dA += SQUARE((ptxyz[3 * lp1 + 2] - ptxyz[3 * lp2 + 2])); // z-coordinate
-                dA = sqrt(dA);
-                double dl = 0;
-                dl = SQUARE(cen[Nredge * ele] - cen[Nredge * neighbor]);          // x-coordinate
-                dl += SQUARE(cen[Nredge * ele + 1] - cen[Nredge * neighbor + 1]); // y-coordinate
-                dl += SQUARE(cen[Nredge * ele + 2] - cen[Nredge * neighbor + 2]); // z-coordinate
-                dl = sqrt(dl);
-                double coef = dA / dl;
-                // Internal flux
-                // contribution for diagonal element of coefficient matrix
-                val[IDele] += coef;
-                col_ind[IDele] = ele;
-                // contribution for off-diagonal element of coefficient matrix
-                if (cell_stat[neighbor] > 0)
-                {
-                    // between known and unknown cells
-                    RHS[ele] += (cell_stat[neighbor] == 1) ? 1000 : 0;
-                }
-                else
-                {
-                    // between 2known cells
-                    val[nnz] = -1 * coef;
-                    col_ind[nnz] = neighbor;
-                    nnz++; // cause creat new element in the coefficient matrix
-                }
-            }
-        }
-        row_ptr[ele + 1] = nnz;
-    }
-    row_ptr[nelem] = nnz;
+//     // calculate the symmetrical Positive Definite Coefficient martix and Right-Hand-Sided vector
+//     int order_in_cells[] = {0, 1, 1, 2, 2, 0};
+//     for (int ele = 0; ele < nelem; ele++)
+//     {
+//         nnz++;
+//         int IDele = nnz - 1;
+//         // Known cells
+//         if (cell_stat[ele] > 0)
+//         {
+//             // equation for this element is u=Tb
+//             val[IDele] = 1;
+//             col_ind[IDele] = ele;
+//             RHS[ele] = (cell_stat[ele] == 1) ? 1000 : 0;
+//         }
+//         else
+//         {
+//             // Unknown cells
+//             for (int nei = 0; nei < Nredge; nei++)
+//             {
+//                 int neighbor = esure[Nredge * ele + nei];
+//                 int lp1 = elems[Nredge * ele + order_in_cells[2 * nei]] - 1;
+//                 int lp2 = elems[Nredge * ele + order_in_cells[2 * nei + 1]] - 1;
+//                 double dA = 0;
+//                 dA = SQUARE((ptxyz[3 * lp1] - ptxyz[3 * lp2]));          // x-coordinate
+//                 dA += SQUARE((ptxyz[3 * lp1 + 1] - ptxyz[3 * lp2 + 1])); // y-coordinate
+//                 dA += SQUARE((ptxyz[3 * lp1 + 2] - ptxyz[3 * lp2 + 2])); // z-coordinate
+//                 dA = sqrt(dA);
+//                 double dl = 0;
+//                 dl = SQUARE(cen[Nredge * ele] - cen[Nredge * neighbor]);          // x-coordinate
+//                 dl += SQUARE(cen[Nredge * ele + 1] - cen[Nredge * neighbor + 1]); // y-coordinate
+//                 dl += SQUARE(cen[Nredge * ele + 2] - cen[Nredge * neighbor + 2]); // z-coordinate
+//                 dl = sqrt(dl);
+//                 double coef = dA / dl;
+//                 // Internal flux
+//                 // contribution for diagonal element of coefficient matrix
+//                 val[IDele] += coef;
+//                 col_ind[IDele] = ele;
+//                 // contribution for off-diagonal element of coefficient matrix
+//                 if (cell_stat[neighbor] > 0)
+//                 {
+//                     // between known and unknown cells
+//                     RHS[ele] += (cell_stat[neighbor] == 1) ? 1000 : 0;
+//                 }
+//                 else
+//                 {
+//                     // between 2known cells
+//                     val[nnz] = -1 * coef;
+//                     col_ind[nnz] = neighbor;
+//                     nnz++; // cause creat new element in the coefficient matrix
+//                 }
+//             }
+//         }
+//         row_ptr[ele + 1] = nnz;
+//     }
+//     row_ptr[nelem] = nnz;
 
-    // SOLVER SECTION
-    CRSMatrix A;
-    A.n = nelem;
-    A.nnz = nnz;
-    A.row_ptr = row_ptr;
-    A.col_index = col_ind;
-    A.values = val;
+//     // SOLVER SECTION
+//     CRSMatrix A;
+//     A.n = nelem;
+//     A.nnz = nnz;
+//     A.row_ptr = row_ptr;
+//     A.col_index = col_ind;
+//     A.values = val;
 
-    // unknown vector
-    double *u = (double *)calloc((size_t)A.n, sizeof(double));
+//     // unknown vector
+//     double *u = (double *)calloc((size_t)A.n, sizeof(double));
 
-    // Solve using CG
-    clock_t start_time, end_time;
-    double cpu_time_used;
-    SolverConfig config = {100000, 1e-8, false};
-    solver_set_config(config);
-    // precond_conjugate_gradient(&A, RHS, u);
-    start_time = clock();
-    conjugate_gradient(&A, RHS, u);
-    end_time = clock();
-    cpu_time_used = (double)(end_time - start_time) / CLOCKS_PER_SEC;
-    printf("* CG Solver execution time : %.2f seconds\n", cpu_time_used);
-#ifdef DEBUG
-    // check the result
-    FunctionWithArgs prtelefield2[] =
-        {
-            {"BC_poisson", 1, nelem, cell_stat, SCA_int_VTK},
-            {"poisson", 1, nelem, u, SCA_double_VTK},
-        };
-    size_t countele2 = sizeof(prtelefield2) / sizeof(prtelefield2[0]);
-    FunctionWithArgs prtpntfield2[] = {0};
-    size_t countpnt2 = 0;
-    CHECK_ERROR(SaveVTK("./", "checkpoisson", 0, M1, tri3funcVTK, prtelefield2, countele2, prtpntfield2, countpnt2));
-#endif
-#pragma endregion solve_Poisson
+//     // Solve using CG
+//     clock_t start_time, end_time;
+//     double cpu_time_used;
+//     SolverConfig config = {100000, 1e-8, false};
+//     solver_set_config(config);
+//     // precond_conjugate_gradient(&A, RHS, u);
+//     start_time = clock();
+//     conjugate_gradient(&A, RHS, u);
+//     end_time = clock();
+//     cpu_time_used = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+//     printf("* CG Solver execution time : %.2f seconds\n", cpu_time_used);
+// #ifdef DEBUG
+//     // check the result
+//     FunctionWithArgs prtelefield2[] =
+//         {
+//             {"BC_poisson", 1, nelem, cell_stat, SCA_int_VTK},
+//             {"poisson", 1, nelem, u, SCA_double_VTK},
+//         };
+//     size_t countele2 = sizeof(prtelefield2) / sizeof(prtelefield2[0]);
+//     FunctionWithArgs prtpntfield2[] = {0};
+//     size_t countpnt2 = 0;
+//     CHECK_ERROR(SaveVTK("./", "checkpoisson", 0, M1, tri3funcVTK, prtelefield2, countele2, prtpntfield2, countpnt2));
+// #endif
+// #pragma endregion solve_Poisson
+
 #pragma region calc_local_basis
-    // calculate the gradient scaler on each element
-    double *norm_grad;
-    CHECK_ERROR(gradient_ele_tri3(nelem, elems, ptxyz, esure, normedge, u, &norm_grad));
-    if (norm_grad == NULL)
-    {
-        fprintf(stderr, "! ERROR: grad array is empty\n");
-        return -1;
-    }
-    for (int ele = 0; ele < nelem; ele++)
-    {
-        double sum = 0;
-        sum += SQUARE(norm_grad[3 * ele]);
-        sum += SQUARE(norm_grad[3 * ele + 1]);
-        sum += SQUARE(norm_grad[3 * ele + 2]);
-        sum = sqrt(sum);
-        if (sum != 0)
-        {
-            norm_grad[3 * ele] /= sum;
-            norm_grad[3 * ele + 1] /= sum;
-            norm_grad[3 * ele + 2] /= sum;
-        }
+    // // calculate the gradient scaler on each element
+    // double *norm_grad;
+    // CHECK_ERROR(gradient_ele_tri3(nelem, elems, ptxyz, esure, normedge, u, &norm_grad));
+    // if (norm_grad == NULL)
+    // {
+    //     fprintf(stderr, "! ERROR: grad array is empty\n");
+    //     return -1;
+    // }
+    // for (int ele = 0; ele < nelem; ele++)
+    // {
+    //     double sum = 0;
+    //     sum += SQUARE(norm_grad[3 * ele]);
+    //     sum += SQUARE(norm_grad[3 * ele + 1]);
+    //     sum += SQUARE(norm_grad[3 * ele + 2]);
+    //     sum = sqrt(sum);
+    //     if (sum != 0)
+    //     {
+    //         norm_grad[3 * ele] /= sum;
+    //         norm_grad[3 * ele + 1] /= sum;
+    //         norm_grad[3 * ele + 2] /= sum;
+    //     }
+    // }
+
+    // take the one edge of tiangular mesh as first local basis 
+    double *edge_vec = (double *)malloc(3 * (size_t)nelem * sizeof(double));
+    for (int ele=0;ele<nelem;ele++){
+        int p1 = elems [3*ele]-1;
+        int p2 = elems [3*ele+1]-1;
+        double dist = 0;
+        for (int i=0;i<3;i++)
+        dist += pow((ptxyz [3*p1+i] - ptxyz [3*p2+i]),2);  
+        dist = sqrt(dist);       
+        for (int i=0;i<3;i++)
+        edge_vec[3 * ele + i] = (ptxyz [3*p1+i] - ptxyz [3*p2+i])/dist;
     }
 
     // calculate the third vector for local coordinate system for each cells
@@ -496,7 +509,7 @@ int main(int argc, char const **argv)
     {
         double thrid_vec[3];
         double first_vec[3] = {normele[3 * ele], normele[3 * ele + 1], normele[3 * ele + 2]};
-        double second_vec[3] = {norm_grad[3 * ele], norm_grad[3 * ele + 1], norm_grad[3 * ele + 2]};
+        double second_vec[3] = {edge_vec[3 * ele], edge_vec[3 * ele + 1], edge_vec[3 * ele + 2]};
         crossProduct(first_vec, second_vec, thrid_vec);
         local_coord[9 * ele] = first_vec[0];
         local_coord[9 * ele + 1] = first_vec[1];
@@ -547,7 +560,7 @@ int main(int argc, char const **argv)
     // save local sys in the VTK format
     FunctionWithArgs prtelefield3[] =
         {
-            {"norm_grad_u", 3, nelem, norm_grad, VEC_double_VTK},
+            {"edge_vec", 3, nelem, edge_vec, VEC_double_VTK},
         };
     size_t countele3 = sizeof(prtelefield3) / sizeof(prtelefield3[0]);
     FunctionWithArgs prtpntfield3[] = {
@@ -721,7 +734,9 @@ int main(int argc, char const **argv)
     int *eigen_class = (int *)calloc((size_t)nelem, sizeof(int));
     for (int ele = 0; ele < nelem; ele++)
     {
-        if (abs(shear_evals_max[ele])>10){
+        double abs = shear_evals_max[ele] ;
+        if (shear_evals_max[ele]<0) abs = -1 * shear_evals_max[ele];
+        if (abs>10){
             if (shear_evals_max[ele] > 0 && shear_evals_min[ele] > 0)
                 eigen_class[ele] = 1;
             if (shear_evals_max[ele] > 0 && shear_evals_min[ele] < 0)
@@ -893,6 +908,7 @@ int main(int argc, char const **argv)
             {"area", 1, nelem, area, SCA_double_VTK},
             {"eigen_class", 1, nelem, eigen_class, SCA_int_VTK},
             {"EValue_max", 1, nelem, shear_evals_max, SCA_double_VTK},
+            {"EValue_min", 1, nelem, shear_evals_min, SCA_double_VTK},
             {"Shear_Von_Mises_Stress", 1, nelem, von_mises, SCA_double_VTK},
             {"Eval_ratio", 1, nelem, eval_ratio, SCA_double_VTK},
             {"Melem", 1, nelem, Melem, SCA_int_VTK}};
@@ -919,18 +935,19 @@ int main(int argc, char const **argv)
     free(esurp_ptr);
     free(area);
     free(inp);
-    free(row_ptr);
-    free(val);
-    free(col_ind);
-    free(RHS);
+    // free(row_ptr);
+    // free(val);
+    // free(col_ind);
+    // free(RHS);
     free(cen);
     free(M1);
-    free(cell_stat);
-    free(u);
+    // free(cell_stat);
+    // free(u);
     free(cenedge);
     free(normele);
     free(normedge);
-    free(norm_grad);
+    // free(norm_grad);
+    free(edge_vec);
     free(local_coord);
     free(st);
     free(shear_evals_max);
