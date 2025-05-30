@@ -264,18 +264,17 @@ int main(int argc, char const **argv)
         fprintf(stderr, "! ERROR in allocation memory or reading read_mask for bleb.\n");
         exit(EXIT_FAILURE);
     }
-    // // find a boundary condition
-    // int *cell_stat;
-    // void *field1;
-    // FunctionWithArgs2 prtreadfield[] = {
-    //     {"bc_mask", 1, nelem, &field1, read_VTK_int},
-    // };
-    // int countfield = sizeof(prtreadfield) / sizeof(prtreadfield[0]);
-    // char BCfile[100];
-    // strcpy(BCfile, past_filename);
-    // strcat(BCfile, ".BC");
-    // CHECK_ERROR(ReadVTK(pst_datadir, BCfile, 0, prtreadfield, countfield));
-    // cell_stat = (int *)field1;
+    // find a boundary condition
+    int *pres_mask;
+    void *field1;
+    FunctionWithArgs2 prtreadfield[] = {
+        {"Press_mask", 1, nelem, &field1, read_VTK_int},
+    };
+    int countfield = sizeof(prtreadfield) / sizeof(prtreadfield[0]);
+    char BCfile[100];
+    strcpy(BCfile, "checkinput");
+    CHECK_ERROR(ReadVTK(pst_rundir, BCfile, 0, prtreadfield, countfield));
+    pres_mask = (int *)field1;
 #pragma endregion required_mask
     // creat mesh struct
     mesh *M1 = (mesh *)malloc(sizeof(mesh));
@@ -590,10 +589,18 @@ int main(int argc, char const **argv)
     {
         // extract stress and normal, t1 and t2 tangantial vectors from arraies
         double stress[3][3], normal[3], t1[3], t2[3];
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = 0; j < 3; j++)
-                stress[i][j] = st[9 * ele + 3 * i + j];
+        if (pres_mask[ele] == 1) {
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                    stress[i][j] = st[9 * ele + 3 * i + j];
+            }
+        }else{
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                    stress[i][j] = 0.0;
+            }
         }
         for (int i = 0; i < 3; i++)
             normal[i] = local_coord[9 * ele + i];
@@ -955,6 +962,7 @@ int main(int argc, char const **argv)
     free(shear_evects_3D_max);
     free(shear_evects_3D_min);
     free(sdir);
+    free(pres_mask);
     free(eval_ratio);
     free(eval_ratio_aneu);
     free(shear_st);
@@ -995,6 +1003,12 @@ int files(void)
     strcat(past_datafilepath[5], past_filename);
     strcat(past_datafilepath[5], ".");
     strcat(past_datafilepath[5], "bleb");
+
+    strcpy(past_datafilepath[6], pst_rundir);
+    strcat(past_datafilepath[6], "checkinput");
+    strcat(past_datafilepath[6], "_");
+    strcat(past_datafilepath[6], iteration);
+    strcat(past_datafilepath[6], ".vtk");    
 
     strcpy(past_datafilepath[3], pst_datadir);
     strcat(past_datafilepath[3], "labels_srf.zfem");

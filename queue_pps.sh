@@ -4,12 +4,12 @@ code_name=EXEC_ppa
 # machines=("ishtar" "loki" "hades" "attila" "marduk" "heise")
 machines=("ishtar")
 # List of cases
-if [ -f /dagon1/achitsaz/runfebio/successful_cases.txt ];then 
-    cases=($(cat /dagon1/achitsaz/runfebio/successful_cases.txt))
+list_dir=/dagon1/achitsaz/runfebio/accept_runs_cases.txt
+if [ -f "$list_dir" ]; then 
+    cases=($(cat "$list_dir"))
 else
-    dir_root=/dagon1/achitsaz/runfebio
-    echo "ERROR: the successful_cases.txt does not exist in this path: $dir_root"  
-    exit
+    echo "ERROR: the list of case files does not exist in this path: $list_dir"  
+    exit 1
 fi
  
 completed_cases=0
